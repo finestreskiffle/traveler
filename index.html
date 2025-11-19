@@ -162,18 +162,46 @@
             const [darkMode, setDarkMode] = useState(false);
             const [editingTrip, setEditingTrip] = useState(null);
             const [showAddModal, setShowAddModal] = useState(false);
+            const [tripTitle, setTripTitle] = useState('Il Mio Viaggio');
+            const [currency, setCurrency] = useState('€');
             const fileInputRef = useRef(null);
+
+            const currencies = [
+                { symbol: '€', name: 'Euro (EUR)' },
+                { symbol: '$', name: 'Dollaro USA (USD)' },
+                { symbol: '£', name: 'Sterlina (GBP)' },
+                { symbol: '¥', name: 'Yen (JPY)' },
+                { symbol: '₣', name: 'Franco Svizzero (CHF)' },
+                { symbol: 'C$', name: 'Dollaro Canadese (CAD)' },
+                { symbol: 'A$', name: 'Dollaro Australiano (AUD)' },
+                { symbol: '₹', name: 'Rupia Indiana (INR)' },
+                { symbol: '元', name: 'Yuan Cinese (CNY)' },
+                { symbol: '₩', name: 'Won Coreano (KRW)' },
+                { symbol: 'R$', name: 'Real Brasiliano (BRL)' },
+                { symbol: '₽', name: 'Rublo Russo (RUB)' },
+                { symbol: 'kr', name: 'Corona Svedese (SEK)' },
+                { symbol: 'zł', name: 'Zloty Polacco (PLN)' },
+                { symbol: '฿', name: 'Baht Thailandese (THB)' },
+            ];
 
             // Load from localStorage
             useEffect(() => {
                 const savedTrips = localStorage.getItem('travelManagerTrips');
                 const savedDarkMode = localStorage.getItem('travelManagerDarkMode');
+                const savedTripTitle = localStorage.getItem('travelManagerTripTitle');
+                const savedCurrency = localStorage.getItem('travelManagerCurrency');
                 
                 if (savedTrips) {
                     setTrips(JSON.parse(savedTrips));
                 }
                 if (savedDarkMode) {
                     setDarkMode(JSON.parse(savedDarkMode));
+                }
+                if (savedTripTitle) {
+                    setTripTitle(savedTripTitle);
+                }
+                if (savedCurrency) {
+                    setCurrency(savedCurrency);
                 }
             }, []);
 
@@ -186,6 +214,14 @@
                 localStorage.setItem('travelManagerDarkMode', JSON.stringify(darkMode));
                 document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
             }, [darkMode]);
+
+            useEffect(() => {
+                localStorage.setItem('travelManagerTripTitle', tripTitle);
+            }, [tripTitle]);
+
+            useEffect(() => {
+                localStorage.setItem('travelManagerCurrency', currency);
+            }, [currency]);
 
             const groupedTrips = groupByDate(trips);
             const dates = Object.keys(groupedTrips);
@@ -640,7 +676,7 @@
                                 placeholder="es. Piedi, Treno, Aereo"
                             />
                             
-                            <label style={styles.inputLabel}>Costo Mezzo (€)</label>
+                            <label style={styles.inputLabel}>Costo Mezzo ({currency})</label>
                             <input
                                 style={styles.input}
                                 type="number"
@@ -665,7 +701,7 @@
                                 placeholder="Descrizione attività"
                             />
                             
-                            <label style={styles.inputLabel}>Costi Vari (€)</label>
+                            <label style={styles.inputLabel}>Costi Vari ({currency})</label>
                             <input
                                 style={styles.input}
                                 type="number"
@@ -698,7 +734,7 @@
             const HomePage = () => (
                 <>
                     <div style={styles.header}>
-                        <h1 style={styles.headerTitle}>Il Mio Viaggio</h1>
+                        <h1 style={styles.headerTitle}>{tripTitle}</h1>
                         <p style={styles.headerSubtitle}>
                             {trips.length} {trips.length === 1 ? 'tappa' : 'tappe'} totali
                         </p>
@@ -739,6 +775,13 @@
                                     >
                                         <Icon name="chevronRight" size={20} />
                                     </button>
+                                </div>
+
+                                <div style={styles.dayCost}>
+                                    <p style={styles.dayCostLabel}>Costo giornata</p>
+                                    <p style={styles.dayCostValue}>
+                                        {currency}{calculateDayCosts(groupedTrips[dates[currentDateIndex]]).toFixed(2)}
+                                    </p>
                                 </div>
 
                                 {groupedTrips[dates[currentDateIndex]]?.map((trip, localIndex) => {
@@ -799,7 +842,7 @@
                                                 <div style={styles.cardRow}>
                                                     <span style={styles.cardLabel}>Costi</span>
                                                     <span style={styles.cardValue}>
-                                                        €{((parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costi Vari']) || 0)).toFixed(2)}
+                                                        {currency}{((parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costi Vari']) || 0)).toFixed(2)}
                                                     </span>
                                                 </div>
                                             )}
@@ -820,13 +863,6 @@
                                         </div>
                                     );
                                 })}
-
-                                <div style={styles.dayCost}>
-                                    <p style={styles.dayCostLabel}>Costo giornata</p>
-                                    <p style={styles.dayCostValue}>
-                                        €{calculateDayCosts(groupedTrips[dates[currentDateIndex]]).toFixed(2)}
-                                    </p>
-                                </div>
                             </>
                         )}
                     </div>
@@ -856,17 +892,17 @@
                         <div style={styles.content}>
                             <div style={styles.dayCost}>
                                 <p style={styles.dayCostLabel}>Totale Viaggio</p>
-                                <p style={styles.dayCostValue}>€{totalCosts.toFixed(2)}</p>
+                                <p style={styles.dayCostValue}>{currency}{totalCosts.toFixed(2)}</p>
                             </div>
 
                             <div style={styles.totalCard}>
                                 <div style={styles.totalRow}>
                                     <span style={styles.cardLabel}>Costi Mezzi</span>
-                                    <span style={styles.cardValue}>€{totalMezzo.toFixed(2)}</span>
+                                    <span style={styles.cardValue}>{currency}{totalMezzo.toFixed(2)}</span>
                                 </div>
                                 <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
                                     <span style={styles.cardLabel}>Costi Vari</span>
-                                    <span style={styles.cardValue}>€{totalVari.toFixed(2)}</span>
+                                    <span style={styles.cardValue}>{currency}{totalVari.toFixed(2)}</span>
                                 </div>
                             </div>
 
@@ -876,7 +912,7 @@
                                     <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
                                         <span style={{ ...styles.cardLabel, fontSize: '15px', color: 'var(--text-primary)' }}>{date}</span>
                                         <span style={{ ...styles.cardValue, fontWeight: '600' }}>
-                                            €{calculateDayCosts(groupedTrips[date]).toFixed(2)}
+                                            {currency}{calculateDayCosts(groupedTrips[date]).toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
@@ -895,6 +931,27 @@
                     </div>
                     
                     <div style={styles.content}>
+                        <label style={styles.inputLabel}>Nome del viaggio</label>
+                        <input
+                            style={{ ...styles.input, marginBottom: '20px' }}
+                            value={tripTitle}
+                            onChange={e => setTripTitle(e.target.value)}
+                            placeholder="Es. Viaggio in Giappone"
+                        />
+
+                        <label style={styles.inputLabel}>Valuta</label>
+                        <select
+                            style={{ ...styles.input, marginBottom: '20px', cursor: 'pointer' }}
+                            value={currency}
+                            onChange={e => setCurrency(e.target.value)}
+                        >
+                            {currencies.map(curr => (
+                                <option key={curr.symbol} value={curr.symbol}>
+                                    {curr.symbol} - {curr.name}
+                                </option>
+                            ))}
+                        </select>
+
                         <div style={styles.settingsItem}>
                             <span style={styles.settingsLabel}>Modalità scura</span>
                             <button

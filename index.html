@@ -782,6 +782,10 @@
                                     <p style={styles.dayCostValue}>
                                         {currency}{calculateDayCosts(groupedTrips[dates[currentDateIndex]]).toFixed(2)}
                                     </p>
+                                    <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '8px', fontSize: '13px', opacity: 0.9 }}>
+                                        <span>Mezzi: {currency}{groupedTrips[dates[currentDateIndex]].reduce((acc, trip) => acc + (parseFloat(trip['Costo Mezzo']) || 0), 0).toFixed(2)}</span>
+                                        <span>Vari: {currency}{groupedTrips[dates[currentDateIndex]].reduce((acc, trip) => acc + (parseFloat(trip['Costi Vari']) || 0), 0).toFixed(2)}</span>
+                                    </div>
                                 </div>
 
                                 {groupedTrips[dates[currentDateIndex]]?.map((trip, localIndex) => {

@@ -359,9 +359,10 @@
                 return -1;
             };
 
-            const getNavigationLink = (fromTrip, toTrip) => {
-                if (fromTrip?.Maps && toTrip?.Maps) {
-                    return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(fromTrip.Maps)}&destination=${encodeURIComponent(toTrip.Maps)}&travelmode=transit`;
+            const getNavigationLink = (toTrip) => {
+                if (toTrip?.Maps) {
+                    // Use current location as origin, destination from the trip's Maps link
+                    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(toTrip.Maps)}&travelmode=transit`;
                 }
                 return null;
             };
@@ -915,7 +916,7 @@
                                     {currentDayTrips.map((trip, localIndex) => {
                                         const globalIndex = getTripIndex(dates[currentDateIndex], localIndex);
                                         const nextTrip = currentDayTrips[localIndex + 1];
-                                        const navLink = getNavigationLink(trip, nextTrip);
+                                        const navLink = getNavigationLink(nextTrip);
                                         const categoryColor = getCategoryColor(trip['Categoria']);
                                         
                                         return (
@@ -968,10 +969,16 @@
                                                 {trip.Maps && (
                                                     <div style={{ ...styles.cardRow, ...styles.cardRowLast }}>
                                                         <span style={styles.cardLabel}>Posizione</span>
-                                                        <a href={trip.Maps} target="_blank" rel="noopener noreferrer" style={styles.mapLink}>
-                                                            <Icon name="map" size={16} />
-                                                            Apri Maps
-                                                        </a>
+                                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                                            <a href={trip.Maps} target="_blank" rel="noopener noreferrer" style={styles.mapLink}>
+                                                                <Icon name="map" size={16} />
+                                                                Mappa
+                                                            </a>
+                                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.Maps)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{ ...styles.mapLink, color: 'var(--success)' }}>
+                                                                <Icon name="navigation" size={16} />
+                                                                Naviga
+                                                            </a>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 {navLink && (

@@ -159,19 +159,6 @@
             return groups;
         };
 
-        const calculateDayCosts = (trips) => {
-            let total = 0;
-            trips.forEach(trip => {
-                const costoMezzo = parseFloat(trip['Costo Mezzo']) || 0;
-                const costoPasto = parseFloat(trip['Costo Pasto']) || 0;
-                const costoHotel = parseFloat(trip['Costo Hotel']) || 0;
-                const costoAttivita = parseFloat(trip['Costo Attività']) || 0;
-                const costiVari = parseFloat(trip['Costi Vari']) || 0;
-                total += costoMezzo + costoPasto + costoHotel + costoAttivita + costiVari;
-            });
-            return total;
-        };
-
         const formatTime = (time) => {
             if (!time || time === '-' || time === '') return 'N/D';
             return time;
@@ -226,6 +213,14 @@
             const [currency, setCurrency] = useState('€');
             const [budget, setBudget] = useState(0);
             const [accentColor, setAccentColor] = useState('blue');
+            const [numPersone, setNumPersone] = useState(1);
+            const [moltiplicatori, setMoltiplicatori] = useState({
+                'Costo Mezzo': false,
+                'Costo Pasto': false,
+                'Costo Hotel': false,
+                'Costo Attività': false,
+                'Costi Vari': false
+            });
             const fileInputRef = useRef(null);
 
             const currencies = [
@@ -254,6 +249,8 @@
                 const savedCurrency = localStorage.getItem('travelManagerCurrency');
                 const savedBudget = localStorage.getItem('travelManagerBudget');
                 const savedAccentColor = localStorage.getItem('travelManagerAccentColor');
+                const savedNumPersone = localStorage.getItem('travelManagerNumPersone');
+                const savedMoltiplicatori = localStorage.getItem('travelManagerMoltiplicatori');
                 
                 if (savedTrips) setTrips(JSON.parse(savedTrips));
                 if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode));
@@ -261,6 +258,8 @@
                 if (savedCurrency) setCurrency(savedCurrency);
                 if (savedBudget) setBudget(parseFloat(savedBudget));
                 if (savedAccentColor) setAccentColor(savedAccentColor);
+                if (savedNumPersone) setNumPersone(parseInt(savedNumPersone));
+                if (savedMoltiplicatori) setMoltiplicatori(JSON.parse(savedMoltiplicatori));
             }, []);
 
             // Save to localStorage
@@ -290,11 +289,37 @@
                 document.documentElement.setAttribute('data-accent', accentColor);
             }, [accentColor]);
 
+            useEffect(() => {
+                localStorage.setItem('travelManagerNumPersone', numPersone.toString());
+            }, [numPersone]);
+
+            useEffect(() => {
+                localStorage.setItem('travelManagerMoltiplicatori', JSON.stringify(moltiplicatori));
+            }, [moltiplicatori]);
+
             const groupedTrips = groupByDate(trips);
             const dates = Object.keys(groupedTrips);
 
+            // Helper to get cost with multiplier
+            const getCostWithMultiplier = (trip, costField) => {
+                const baseCost = parseFloat(trip[costField]) || 0;
+                if (moltiplicatori[costField] && numPersone > 1) {
+                    return baseCost * numPersone;
+                }
+                return baseCost;
+            };
+
+            // Helper to get total cost for a trip
+            const getTripTotalCost = (trip) => {
+                return getCostWithMultiplier(trip, 'Costo Mezzo') +
+                       getCostWithMultiplier(trip, 'Costo Pasto') +
+                       getCostWithMultiplier(trip, 'Costo Hotel') +
+                       getCostWithMultiplier(trip, 'Costo Attività') +
+                       getCostWithMultiplier(trip, 'Costi Vari');
+            };
+
             const totalCosts = trips.reduce((acc, trip) => {
-                return acc + (parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costo Pasto']) || 0) + (parseFloat(trip['Costo Hotel']) || 0) + (parseFloat(trip['Costo Attività']) || 0) + (parseFloat(trip['Costi Vari']) || 0);
+                return acc + getTripTotalCost(trip);
             }, 0);
 
             const totalDistance = trips.reduce((acc, trip) => {
@@ -863,11 +888,12 @@
             // Home Page
             const HomePage = () => {
                 const currentDayTrips = groupedTrips[dates[currentDateIndex]] || [];
-                const dayMezzoCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Mezzo']) || 0), 0);
-                const dayPastoCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Pasto']) || 0), 0);
-                const dayHotelCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Hotel']) || 0), 0);
-                const dayAttivitaCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Attività']) || 0), 0);
-                const dayVariCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costi Vari']) || 0), 0);
+                const dayMezzoCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Mezzo'), 0);
+                const dayPastoCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Pasto'), 0);
+                const dayHotelCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Hotel'), 0);
+                const dayAttivitaCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Attività'), 0);
+                const dayVariCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costi Vari'), 0);
+                const dayTotalCost = dayMezzoCost + dayPastoCost + dayHotelCost + dayAttivitaCost + dayVariCost;
                 const dayDistance = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Distanza']) || 0), 0);
 
                 return (
@@ -899,8 +925,8 @@
                                     </div>
 
                                     <div style={styles.dayCost}>
-                                        <p style={styles.dayCostLabel}>Costo giornata</p>
-                                        <p style={styles.dayCostValue}>{currency}{calculateDayCosts(currentDayTrips).toFixed(2)}</p>
+                                        <p style={styles.dayCostLabel}>Costo giornata{numPersone > 1 ? ` (${numPersone} persone)` : ''}</p>
+                                        <p style={styles.dayCostValue}>{currency}{dayTotalCost.toFixed(2)}</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '8px', fontSize: '12px', opacity: 0.9 }}>
                                             {dayMezzoCost > 0 && <span>🚗 {currency}{dayMezzoCost.toFixed(0)}</span>}
                                             {dayPastoCost > 0 && <span>🍽️ {currency}{dayPastoCost.toFixed(0)}</span>}
@@ -961,31 +987,31 @@
                                                 {trip['Costo Mezzo'] && (
                                                     <div style={styles.cardRow}>
                                                         <span style={styles.cardLabel}>🚗 Mezzo</span>
-                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Mezzo']).toFixed(0)}</span>
+                                                        <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Mezzo').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Pasto'] && (
                                                     <div style={styles.cardRow}>
                                                         <span style={styles.cardLabel}>🍽️ Pasto</span>
-                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Pasto']).toFixed(0)}</span>
+                                                        <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Pasto').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Hotel'] && (
                                                     <div style={styles.cardRow}>
                                                         <span style={styles.cardLabel}>🏨 Hotel</span>
-                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Hotel']).toFixed(0)}</span>
+                                                        <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Hotel').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Attività'] && (
                                                     <div style={styles.cardRow}>
                                                         <span style={styles.cardLabel}>🎯 Attività</span>
-                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Attività']).toFixed(0)}</span>
+                                                        <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Attività').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costi Vari'] && (
                                                     <div style={styles.cardRow}>
                                                         <span style={styles.cardLabel}>📦 Vari</span>
-                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costi Vari']).toFixed(0)}</span>
+                                                        <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costi Vari').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip.Maps && (
@@ -1019,11 +1045,11 @@
 
             // Costs Page
             const CostsPage = () => {
-                const totalMezzo = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Mezzo']) || 0), 0);
-                const totalPasto = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Pasto']) || 0), 0);
-                const totalHotel = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Hotel']) || 0), 0);
-                const totalAttivita = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Attività']) || 0), 0);
-                const totalVari = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costi Vari']) || 0), 0);
+                const totalMezzo = trips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Mezzo'), 0);
+                const totalPasto = trips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Pasto'), 0);
+                const totalHotel = trips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Hotel'), 0);
+                const totalAttivita = trips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Attività'), 0);
+                const totalVari = trips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costi Vari'), 0);
 
                 // Cost breakdown for chart
                 const costBreakdown = [
@@ -1038,11 +1064,16 @@
                 const budgetPercentage = budget > 0 ? Math.min((totalCosts / budget) * 100, 100) : 0;
                 const budgetRemaining = budget - totalCosts;
 
+                // Calculate day costs with multiplier
+                const getDayCostWithMultiplier = (dayTrips) => {
+                    return dayTrips.reduce((acc, trip) => acc + getTripTotalCost(trip), 0);
+                };
+
                 return (
                     <>
                         <div style={styles.header}>
                             <h1 style={styles.headerTitle}>Costi</h1>
-                            <p style={styles.headerSubtitle}>Riepilogo spese viaggio</p>
+                            <p style={styles.headerSubtitle}>Riepilogo spese{numPersone > 1 ? ` per ${numPersone} persone` : ''}</p>
                         </div>
                         
                         <div style={styles.content}>
@@ -1122,7 +1153,7 @@
 
                             <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>Per Giornata</h3>
                             {dates.map(date => {
-                                const dayCost = calculateDayCosts(groupedTrips[date]);
+                                const dayCost = getDayCostWithMultiplier(groupedTrips[date]);
                                 const dayDistance = groupedTrips[date].reduce((acc, trip) => acc + (parseFloat(trip['Distanza']) || 0), 0);
                                 return (
                                     <div key={date} style={styles.totalCard}>
@@ -1142,62 +1173,126 @@
             };
 
             // Settings Page
-            const SettingsPage = () => (
-                <>
-                    <div style={styles.header}>
-                        <h1 style={styles.headerTitle}>Impostazioni</h1>
-                        <p style={styles.headerSubtitle}>Personalizza l'app</p>
-                    </div>
-                    
-                    <div style={styles.content}>
-                        <label style={styles.inputLabel}>Nome del viaggio</label>
-                        <input style={styles.input} value={tripTitle} onChange={e => setTripTitle(e.target.value)} placeholder="Es. Viaggio in Giappone" />
+            const SettingsPage = () => {
+                const [localTitle, setLocalTitle] = useState(tripTitle);
+                
+                const handleTitleBlur = () => {
+                    setTripTitle(localTitle);
+                };
 
-                        <label style={styles.inputLabel}>Budget totale ({currency})</label>
-                        <input style={styles.input} type="number" value={budget || ''} onChange={e => setBudget(parseFloat(e.target.value) || 0)} placeholder="0" />
+                const toggleMoltiplicatore = (field) => {
+                    setMoltiplicatori(prev => ({
+                        ...prev,
+                        [field]: !prev[field]
+                    }));
+                };
 
-                        <label style={styles.inputLabel}>Valuta</label>
-                        <select style={{ ...styles.input, cursor: 'pointer' }} value={currency} onChange={e => setCurrency(e.target.value)}>
-                            {currencies.map(curr => (<option key={curr.symbol} value={curr.symbol}>{curr.symbol} - {curr.name}</option>))}
-                        </select>
-
-                        <label style={styles.inputLabel}>Colore tema</label>
-                        <div style={styles.colorPicker}>
-                            {ACCENT_COLORS.map(color => (
-                                <div key={color.id} style={{...styles.colorOption, background: color.color, ...(accentColor === color.id ? styles.colorOptionSelected : {})}} onClick={() => setAccentColor(color.id)}>
-                                    {accentColor === color.id && <Icon name="check" size={16} />}
-                                </div>
-                            ))}
+                return (
+                    <>
+                        <div style={styles.header}>
+                            <h1 style={styles.headerTitle}>Impostazioni</h1>
+                            <p style={styles.headerSubtitle}>Personalizza l'app</p>
                         </div>
+                        
+                        <div style={styles.content}>
+                            <label style={styles.inputLabel}>Nome del viaggio</label>
+                            <input 
+                                style={styles.input} 
+                                value={localTitle} 
+                                onChange={e => setLocalTitle(e.target.value)} 
+                                onBlur={handleTitleBlur}
+                                placeholder="Es. Viaggio in Giappone" 
+                            />
 
-                        <div style={styles.settingsItem}>
-                            <span style={styles.settingsLabel}>Modalità scura</span>
-                            <button style={{...styles.toggle, background: darkMode ? 'var(--accent)' : 'var(--separator)'}} onClick={() => setDarkMode(!darkMode)}>
-                                <div style={{...styles.toggleThumb, left: darkMode ? '22px' : '2px'}} />
+                            <label style={styles.inputLabel}>Budget totale ({currency})</label>
+                            <input style={styles.input} type="number" value={budget || ''} onChange={e => setBudget(parseFloat(e.target.value) || 0)} placeholder="0" />
+
+                            <label style={styles.inputLabel}>Valuta</label>
+                            <select style={{ ...styles.input, cursor: 'pointer' }} value={currency} onChange={e => setCurrency(e.target.value)}>
+                                {currencies.map(curr => (<option key={curr.symbol} value={curr.symbol}>{curr.symbol} - {curr.name}</option>))}
+                            </select>
+
+                            <div style={{ ...styles.totalCard, marginTop: '8px' }}>
+                                <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>👥 Calcolo per più persone</h3>
+                                
+                                <label style={styles.inputLabel}>Numero di persone</label>
+                                <input 
+                                    style={{ ...styles.input, marginBottom: '16px' }} 
+                                    type="number" 
+                                    min="1"
+                                    value={numPersone} 
+                                    onChange={e => setNumPersone(Math.max(1, parseInt(e.target.value) || 1))} 
+                                />
+                                
+                                <label style={styles.inputLabel}>Moltiplica per {numPersone} persone:</label>
+                                
+                                {[
+                                    { field: 'Costo Mezzo', icon: '🚗', label: 'Mezzi' },
+                                    { field: 'Costo Pasto', icon: '🍽️', label: 'Pasti' },
+                                    { field: 'Costo Hotel', icon: '🏨', label: 'Hotel' },
+                                    { field: 'Costo Attività', icon: '🎯', label: 'Attività' },
+                                    { field: 'Costi Vari', icon: '📦', label: 'Vari' }
+                                ].map(item => (
+                                    <div key={item.field} style={{ ...styles.settingsItem, marginBottom: '8px', padding: '12px' }}>
+                                        <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{item.icon} {item.label}</span>
+                                        <button
+                                            style={{
+                                                ...styles.toggle,
+                                                background: moltiplicatori[item.field] ? 'var(--accent)' : 'var(--separator)',
+                                                width: '44px',
+                                                height: '26px'
+                                            }}
+                                            onClick={() => toggleMoltiplicatore(item.field)}
+                                        >
+                                            <div style={{
+                                                ...styles.toggleThumb,
+                                                width: '22px',
+                                                height: '22px',
+                                                left: moltiplicatori[item.field] ? '20px' : '2px'
+                                            }} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <label style={styles.inputLabel}>Colore tema</label>
+                            <div style={styles.colorPicker}>
+                                {ACCENT_COLORS.map(color => (
+                                    <div key={color.id} style={{...styles.colorOption, background: color.color, ...(accentColor === color.id ? styles.colorOptionSelected : {})}} onClick={() => setAccentColor(color.id)}>
+                                        {accentColor === color.id && <Icon name="check" size={16} />}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={styles.settingsItem}>
+                                <span style={styles.settingsLabel}>Modalità scura</span>
+                                <button style={{...styles.toggle, background: darkMode ? 'var(--accent)' : 'var(--separator)'}} onClick={() => setDarkMode(!darkMode)}>
+                                    <div style={{...styles.toggleThumb, left: darkMode ? '22px' : '2px'}} />
+                                </button>
+                            </div>
+
+                            <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} style={{ display: 'none' }} />
+                            
+                            <button style={{ ...styles.button, ...styles.primaryButton }} onClick={() => fileInputRef.current?.click()}>
+                                <Icon name="upload" size={20} />
+                                Importa CSV
                             </button>
+                            
+                            <button style={{ ...styles.button, ...styles.secondaryButton }} onClick={handleExportCSV} disabled={trips.length === 0}>
+                                <Icon name="download" size={20} />
+                                Esporta CSV
+                            </button>
+
+                            {trips.length > 0 && (
+                                <button style={{ ...styles.button, background: 'var(--danger)', color: 'white' }} onClick={() => { if (confirm('Sei sicuro di voler eliminare tutti i dati?')) { setTrips([]); setCurrentDateIndex(0); }}}>
+                                    <Icon name="trash" size={20} />
+                                    Elimina tutti i dati
+                                </button>
+                            )}
                         </div>
-
-                        <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} style={{ display: 'none' }} />
-                        
-                        <button style={{ ...styles.button, ...styles.primaryButton }} onClick={() => fileInputRef.current?.click()}>
-                            <Icon name="upload" size={20} />
-                            Importa CSV
-                        </button>
-                        
-                        <button style={{ ...styles.button, ...styles.secondaryButton }} onClick={handleExportCSV} disabled={trips.length === 0}>
-                            <Icon name="download" size={20} />
-                            Esporta CSV
-                        </button>
-
-                        {trips.length > 0 && (
-                            <button style={{ ...styles.button, background: 'var(--danger)', color: 'white' }} onClick={() => { if (confirm('Sei sicuro di voler eliminare tutti i dati?')) { setTrips([]); setCurrentDateIndex(0); }}}>
-                                <Icon name="trash" size={20} />
-                                Elimina tutti i dati
-                            </button>
-                        )}
-                    </div>
-                </>
-            );
+                    </>
+                );
+            };
 
             return (
                 <div style={styles.container}>

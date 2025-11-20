@@ -362,14 +362,6 @@
                 return -1;
             };
 
-            const getNavigationLink = (toTrip) => {
-                if (toTrip?.Maps) {
-                    // Use current location as origin, destination from the trip's Maps link
-                    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(toTrip.Maps)}&travelmode=transit`;
-                }
-                return null;
-            };
-
             const styles = {
                 container: {
                     maxWidth: '500px',
@@ -773,19 +765,6 @@
                 colorOptionSelected: {
                     border: '3px solid var(--text-primary)',
                 },
-                navigationButton: {
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 12px',
-                    background: 'var(--accent)',
-                    color: 'white',
-                    borderRadius: '8px',
-                    textDecoration: 'none',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    marginTop: '8px',
-                },
             };
 
             // Trip Edit Modal
@@ -936,8 +915,6 @@
 
                                     {currentDayTrips.map((trip, localIndex) => {
                                         const globalIndex = getTripIndex(dates[currentDateIndex], localIndex);
-                                        const nextTrip = currentDayTrips[localIndex + 1];
-                                        const navLink = getNavigationLink(nextTrip);
                                         const categoryColor = getCategoryColor(trip['Categoria']);
                                         
                                         return (
@@ -1019,18 +996,12 @@
                                                                 <Icon name="map" size={16} />
                                                                 Mappa
                                                             </a>
-                                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.Maps)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{ ...styles.mapLink, color: 'var(--success)' }}>
+                                                            <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.Luogo)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{ ...styles.mapLink, color: 'var(--success)' }}>
                                                                 <Icon name="navigation" size={16} />
                                                                 Naviga
                                                             </a>
                                                         </div>
                                                     </div>
-                                                )}
-                                                {navLink && (
-                                                    <a href={navLink} target="_blank" rel="noopener noreferrer" style={styles.navigationButton}>
-                                                        <Icon name="navigation" size={14} />
-                                                        Naviga verso {nextTrip.Luogo}
-                                                    </a>
                                                 )}
                                             </div>
                                         );

@@ -138,7 +138,7 @@
 
         const generateCSV = (trips) => {
             if (trips.length === 0) return '';
-            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Luogo', 'Descrizione', 'Costi Vari', 'Maps', 'Categoria', 'Distanza'];
+            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza'];
             const lines = [headers.join(';')];
             
             trips.forEach(trip => {
@@ -163,8 +163,11 @@
             let total = 0;
             trips.forEach(trip => {
                 const costoMezzo = parseFloat(trip['Costo Mezzo']) || 0;
+                const costoPasto = parseFloat(trip['Costo Pasto']) || 0;
+                const costoHotel = parseFloat(trip['Costo Hotel']) || 0;
+                const costoAttivita = parseFloat(trip['Costo Attività']) || 0;
                 const costiVari = parseFloat(trip['Costi Vari']) || 0;
-                total += costoMezzo + costiVari;
+                total += costoMezzo + costoPasto + costoHotel + costoAttivita + costiVari;
             });
             return total;
         };
@@ -291,7 +294,7 @@
             const dates = Object.keys(groupedTrips);
 
             const totalCosts = trips.reduce((acc, trip) => {
-                return acc + (parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costi Vari']) || 0);
+                return acc + (parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costo Pasto']) || 0) + (parseFloat(trip['Costo Hotel']) || 0) + (parseFloat(trip['Costo Attività']) || 0) + (parseFloat(trip['Costi Vari']) || 0);
             }, 0);
 
             const totalDistance = trips.reduce((acc, trip) => {
@@ -793,9 +796,12 @@
                     'Orario Arrivo': '',
                     'Mezzo': '',
                     'Costo Mezzo': '',
+                    'Costo Pasto': '',
+                    'Costo Hotel': '',
+                    'Costo Attività': '',
+                    'Costi Vari': '',
                     'Luogo': '',
                     'Descrizione': '',
-                    'Costi Vari': '',
                     'Maps': '',
                     'Categoria': 'altro',
                     'Distanza': ''
@@ -835,6 +841,15 @@
                             <label style={styles.inputLabel}>Costo Mezzo ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costo Mezzo']} onChange={e => handleChange('Costo Mezzo', e.target.value)} placeholder="0" />
                             
+                            <label style={styles.inputLabel}>Costo Pasto ({currency})</label>
+                            <input style={styles.input} type="number" value={formData['Costo Pasto']} onChange={e => handleChange('Costo Pasto', e.target.value)} placeholder="0" />
+                            
+                            <label style={styles.inputLabel}>Costo Hotel ({currency})</label>
+                            <input style={styles.input} type="number" value={formData['Costo Hotel']} onChange={e => handleChange('Costo Hotel', e.target.value)} placeholder="0" />
+                            
+                            <label style={styles.inputLabel}>Costo Attività ({currency})</label>
+                            <input style={styles.input} type="number" value={formData['Costo Attività']} onChange={e => handleChange('Costo Attività', e.target.value)} placeholder="0" />
+                            
                             <label style={styles.inputLabel}>Luogo</label>
                             <input style={styles.input} value={formData['Luogo']} onChange={e => handleChange('Luogo', e.target.value)} placeholder="Nome del luogo" />
                             
@@ -870,6 +885,9 @@
             const HomePage = () => {
                 const currentDayTrips = groupedTrips[dates[currentDateIndex]] || [];
                 const dayMezzoCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Mezzo']) || 0), 0);
+                const dayPastoCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Pasto']) || 0), 0);
+                const dayHotelCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Hotel']) || 0), 0);
+                const dayAttivitaCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Attività']) || 0), 0);
                 const dayVariCost = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Costi Vari']) || 0), 0);
                 const dayDistance = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Distanza']) || 0), 0);
 
@@ -904,9 +922,12 @@
                                     <div style={styles.dayCost}>
                                         <p style={styles.dayCostLabel}>Costo giornata</p>
                                         <p style={styles.dayCostValue}>{currency}{calculateDayCosts(currentDayTrips).toFixed(2)}</p>
-                                        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '8px', fontSize: '13px', opacity: 0.9 }}>
-                                            <span>Mezzi: {currency}{dayMezzoCost.toFixed(2)}</span>
-                                            <span>Vari: {currency}{dayVariCost.toFixed(2)}</span>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '8px', fontSize: '12px', opacity: 0.9 }}>
+                                            {dayMezzoCost > 0 && <span>🚗 {currency}{dayMezzoCost.toFixed(0)}</span>}
+                                            {dayPastoCost > 0 && <span>🍽️ {currency}{dayPastoCost.toFixed(0)}</span>}
+                                            {dayHotelCost > 0 && <span>🏨 {currency}{dayHotelCost.toFixed(0)}</span>}
+                                            {dayAttivitaCost > 0 && <span>🎯 {currency}{dayAttivitaCost.toFixed(0)}</span>}
+                                            {dayVariCost > 0 && <span>📦 {currency}{dayVariCost.toFixed(0)}</span>}
                                         </div>
                                         {dayDistance > 0 && (
                                             <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.8 }}>📍 {dayDistance.toFixed(1)} km percorsi</div>
@@ -960,10 +981,34 @@
                                                         <span style={styles.cardValue}>{trip['Distanza']} km</span>
                                                     </div>
                                                 )}
-                                                {(trip['Costo Mezzo'] || trip['Costi Vari']) && (
+                                                {trip['Costo Mezzo'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>Costi</span>
-                                                        <span style={styles.cardValue}>{currency}{((parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costi Vari']) || 0)).toFixed(2)}</span>
+                                                        <span style={styles.cardLabel}>🚗 Mezzo</span>
+                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Mezzo']).toFixed(0)}</span>
+                                                    </div>
+                                                )}
+                                                {trip['Costo Pasto'] && (
+                                                    <div style={styles.cardRow}>
+                                                        <span style={styles.cardLabel}>🍽️ Pasto</span>
+                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Pasto']).toFixed(0)}</span>
+                                                    </div>
+                                                )}
+                                                {trip['Costo Hotel'] && (
+                                                    <div style={styles.cardRow}>
+                                                        <span style={styles.cardLabel}>🏨 Hotel</span>
+                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Hotel']).toFixed(0)}</span>
+                                                    </div>
+                                                )}
+                                                {trip['Costo Attività'] && (
+                                                    <div style={styles.cardRow}>
+                                                        <span style={styles.cardLabel}>🎯 Attività</span>
+                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costo Attività']).toFixed(0)}</span>
+                                                    </div>
+                                                )}
+                                                {trip['Costi Vari'] && (
+                                                    <div style={styles.cardRow}>
+                                                        <span style={styles.cardLabel}>📦 Vari</span>
+                                                        <span style={styles.cardValue}>{currency}{parseFloat(trip['Costi Vari']).toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip.Maps && (
@@ -1004,17 +1049,21 @@
             // Costs Page
             const CostsPage = () => {
                 const totalMezzo = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Mezzo']) || 0), 0);
+                const totalPasto = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Pasto']) || 0), 0);
+                const totalHotel = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Hotel']) || 0), 0);
+                const totalAttivita = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costo Attività']) || 0), 0);
                 const totalVari = trips.reduce((acc, trip) => acc + (parseFloat(trip['Costi Vari']) || 0), 0);
 
-                const costsByCategory = EXPENSE_CATEGORIES.map(cat => {
-                    const categoryTrips = trips.filter(trip => trip['Categoria'] === cat.id);
-                    const total = categoryTrips.reduce((acc, trip) => {
-                        return acc + (parseFloat(trip['Costo Mezzo']) || 0) + (parseFloat(trip['Costi Vari']) || 0);
-                    }, 0);
-                    return { ...cat, total };
-                }).filter(cat => cat.total > 0);
+                // Cost breakdown for chart
+                const costBreakdown = [
+                    { name: 'Mezzi', icon: '🚗', total: totalMezzo, color: '#007AFF' },
+                    { name: 'Pasti', icon: '🍽️', total: totalPasto, color: '#FF9500' },
+                    { name: 'Hotel', icon: '🏨', total: totalHotel, color: '#5856D6' },
+                    { name: 'Attività', icon: '🎯', total: totalAttivita, color: '#34C759' },
+                    { name: 'Vari', icon: '📦', total: totalVari, color: '#8E8E93' },
+                ].filter(item => item.total > 0);
 
-                const maxCategoryCost = Math.max(...costsByCategory.map(c => c.total), 1);
+                const maxCost = Math.max(...costBreakdown.map(c => c.total), 1);
                 const budgetPercentage = budget > 0 ? Math.min((totalCosts / budget) * 100, 100) : 0;
                 const budgetRemaining = budget - totalCosts;
 
@@ -1049,28 +1098,50 @@
                             )}
 
                             <div style={styles.totalCard}>
-                                <div style={styles.totalRow}>
-                                    <span style={styles.cardLabel}>Costi Mezzi</span>
-                                    <span style={styles.cardValue}>{currency}{totalMezzo.toFixed(2)}</span>
-                                </div>
-                                <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
-                                    <span style={styles.cardLabel}>Costi Vari</span>
-                                    <span style={styles.cardValue}>{currency}{totalVari.toFixed(2)}</span>
-                                </div>
+                                {totalMezzo > 0 && (
+                                    <div style={styles.totalRow}>
+                                        <span style={styles.cardLabel}>🚗 Costi Mezzi</span>
+                                        <span style={styles.cardValue}>{currency}{totalMezzo.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {totalPasto > 0 && (
+                                    <div style={styles.totalRow}>
+                                        <span style={styles.cardLabel}>🍽️ Costi Pasti</span>
+                                        <span style={styles.cardValue}>{currency}{totalPasto.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {totalHotel > 0 && (
+                                    <div style={styles.totalRow}>
+                                        <span style={styles.cardLabel}>🏨 Costi Hotel</span>
+                                        <span style={styles.cardValue}>{currency}{totalHotel.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {totalAttivita > 0 && (
+                                    <div style={styles.totalRow}>
+                                        <span style={styles.cardLabel}>🎯 Costi Attività</span>
+                                        <span style={styles.cardValue}>{currency}{totalAttivita.toFixed(2)}</span>
+                                    </div>
+                                )}
+                                {totalVari > 0 && (
+                                    <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
+                                        <span style={styles.cardLabel}>📦 Costi Vari</span>
+                                        <span style={styles.cardValue}>{currency}{totalVari.toFixed(2)}</span>
+                                    </div>
+                                )}
                             </div>
 
-                            {costsByCategory.length > 0 && (
+                            {costBreakdown.length > 0 && (
                                 <div style={styles.chartContainer}>
                                     <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>
                                         <Icon name="pieChart" size={20} />
-                                        Per Categoria
+                                        Per Tipo di Spesa
                                     </h3>
-                                    {costsByCategory.map(cat => (
-                                        <div key={cat.id} style={styles.chartBar}>
-                                            <span style={styles.chartBarLabel}>{cat.icon} {cat.name}</span>
+                                    {costBreakdown.map(item => (
+                                        <div key={item.name} style={styles.chartBar}>
+                                            <span style={styles.chartBarLabel}>{item.icon} {item.name}</span>
                                             <div style={styles.chartBarTrack}>
-                                                <div style={{...styles.chartBarFill, width: `${(cat.total / maxCategoryCost) * 100}%`, background: cat.color}}>
-                                                    {currency}{cat.total.toFixed(0)}
+                                                <div style={{...styles.chartBarFill, width: `${(item.total / maxCost) * 100}%`, background: item.color}}>
+                                                    {currency}{item.total.toFixed(0)}
                                                 </div>
                                             </div>
                                         </div>

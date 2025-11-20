@@ -138,7 +138,7 @@
 
         const generateCSV = (trips) => {
             if (trips.length === 0) return '';
-            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza'];
+            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza', 'Completata'];
             const lines = [headers.join(';')];
             
             trips.forEach(trip => {
@@ -198,6 +198,8 @@
                 x: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
                 navigation: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>,
                 pieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
+                search: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+                grip: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>,
             };
             return icons[name] || null;
         };
@@ -221,7 +223,13 @@
                 'Costo Attività': false,
                 'Costi Vari': false
             });
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedCategory, setSelectedCategory] = useState('all');
+            const [draggedIndex, setDraggedIndex] = useState(null);
+            const [touchStart, setTouchStart] = useState(null);
+            const [touchEnd, setTouchEnd] = useState(null);
             const fileInputRef = useRef(null);
+            const swipeContainerRef = useRef(null);
 
             const currencies = [
                 { symbol: '€', name: 'Euro (EUR)' },
@@ -374,6 +382,83 @@
                     [newTrips[tripIndex], newTrips[newIndex]] = [newTrips[newIndex], newTrips[tripIndex]];
                     setTrips(newTrips);
                 }
+            };
+
+            const handleToggleComplete = (tripIndex) => {
+                const newTrips = [...trips];
+                newTrips[tripIndex] = {
+                    ...newTrips[tripIndex],
+                    'Completata': newTrips[tripIndex]['Completata'] === 'true' ? 'false' : 'true'
+                };
+                setTrips(newTrips);
+            };
+
+            // Swipe handlers
+            const minSwipeDistance = 50;
+
+            const onTouchStart = (e) => {
+                setTouchEnd(null);
+                setTouchStart(e.targetTouches[0].clientX);
+            };
+
+            const onTouchMove = (e) => {
+                setTouchEnd(e.targetTouches[0].clientX);
+            };
+
+            const onTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                const distance = touchStart - touchEnd;
+                const isLeftSwipe = distance > minSwipeDistance;
+                const isRightSwipe = distance < -minSwipeDistance;
+                
+                if (isLeftSwipe && currentDateIndex < dates.length - 1) {
+                    setCurrentDateIndex(currentDateIndex + 1);
+                }
+                if (isRightSwipe && currentDateIndex > 0) {
+                    setCurrentDateIndex(currentDateIndex - 1);
+                }
+            };
+
+            // Drag & Drop handlers
+            const handleDragStart = (e, index) => {
+                setDraggedIndex(index);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', e.target.outerHTML);
+                e.target.style.opacity = '0.5';
+            };
+
+            const handleDragEnd = (e) => {
+                e.target.style.opacity = '1';
+                setDraggedIndex(null);
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = (e, dropIndex) => {
+                e.preventDefault();
+                if (draggedIndex === null || draggedIndex === dropIndex) return;
+                
+                const newTrips = [...trips];
+                const [draggedTrip] = newTrips.splice(draggedIndex, 1);
+                newTrips.splice(dropIndex, 0, draggedTrip);
+                setTrips(newTrips);
+                setDraggedIndex(null);
+            };
+
+            // Filter trips based on search and category
+            const filterTrips = (tripsToFilter) => {
+                return tripsToFilter.filter(trip => {
+                    const matchesSearch = searchQuery === '' || 
+                        (trip.Luogo && trip.Luogo.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                        (trip.Descrizione && trip.Descrizione.toLowerCase().includes(searchQuery.toLowerCase()));
+                    
+                    const matchesCategory = selectedCategory === 'all' || trip.Categoria === selectedCategory;
+                    
+                    return matchesSearch && matchesCategory;
+                });
             };
 
             const getTripIndex = (date, localIndex) => {
@@ -791,6 +876,93 @@
                 colorOptionSelected: {
                     border: '3px solid var(--text-primary)',
                 },
+                searchContainer: {
+                    marginBottom: '16px',
+                },
+                searchInput: {
+                    width: '100%',
+                    padding: '12px 16px',
+                    paddingLeft: '44px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--separator)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '16px',
+                    outline: 'none',
+                },
+                searchIcon: {
+                    position: 'absolute',
+                    left: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-tertiary)',
+                },
+                filterContainer: {
+                    display: 'flex',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    paddingBottom: '8px',
+                    marginBottom: '16px',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                },
+                filterChip: {
+                    padding: '8px 16px',
+                    borderRadius: '20px',
+                    border: 'none',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                },
+                filterChipActive: {
+                    background: 'var(--accent)',
+                    color: 'white',
+                },
+                dragHandle: {
+                    cursor: 'grab',
+                    padding: '8px',
+                    color: 'var(--text-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    touchAction: 'none',
+                },
+                completionToggle: {
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '14px',
+                    border: '2px solid var(--separator)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                    flexShrink: 0,
+                },
+                completionToggleActive: {
+                    background: 'var(--success)',
+                    borderColor: 'var(--success)',
+                },
+                completedCard: {
+                    opacity: 0.6,
+                },
+                completedTitle: {
+                    textDecoration: 'line-through',
+                    color: 'var(--text-tertiary)',
+                },
+                swipeContainer: {
+                    touchAction: 'pan-y',
+                },
+                noResults: {
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: 'var(--text-tertiary)',
+                },
             };
 
             // Trip Edit Modal
@@ -809,7 +981,8 @@
                     'Descrizione': '',
                     'Maps': '',
                     'Categoria': 'altro',
-                    'Distanza': ''
+                    'Distanza': '',
+                    'Completata': 'false'
                 });
 
                 const handleChange = (field, value) => {
@@ -889,6 +1062,7 @@
             // Home Page
             const HomePage = () => {
                 const currentDayTrips = groupedTrips[dates[currentDateIndex]] || [];
+                const filteredDayTrips = filterTrips(currentDayTrips);
                 const dayMezzoCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Mezzo'), 0);
                 const dayPastoCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Pasto'), 0);
                 const dayHotelCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costo Hotel'), 0);
@@ -896,6 +1070,7 @@
                 const dayVariCost = currentDayTrips.reduce((acc, trip) => acc + getCostWithMultiplier(trip, 'Costi Vari'), 0);
                 const dayTotalCost = dayMezzoCost + dayPastoCost + dayHotelCost + dayAttivitaCost + dayVariCost;
                 const dayDistance = currentDayTrips.reduce((acc, trip) => acc + (parseFloat(trip['Distanza']) || 0), 0);
+                const completedCount = currentDayTrips.filter(t => t['Completata'] === 'true').length;
 
                 return (
                     <>
@@ -914,7 +1089,7 @@
                                     textAlign: 'center'
                                 }}>
                                     <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                                        {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} persone` : ''}
+                                        {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} persone` : ''} • {completedCount}/{currentDayTrips.length} ✓
                                     </div>
                                     <div style={{ fontSize: '22px', fontWeight: '700' }}>
                                         {currency}{dayTotalCost.toFixed(2)}
@@ -930,7 +1105,55 @@
                             )}
                         </div>
                         
-                        <div style={styles.content}>
+                        <div 
+                            style={{...styles.content, ...styles.swipeContainer}}
+                            onTouchStart={onTouchStart}
+                            onTouchMove={onTouchMove}
+                            onTouchEnd={onTouchEnd}
+                            ref={swipeContainerRef}
+                        >
+                            {dates.length > 0 && (
+                                <>
+                                    {/* Search Bar */}
+                                    <div style={{...styles.searchContainer, position: 'relative'}}>
+                                        <div style={styles.searchIcon}>
+                                            <Icon name="search" size={18} />
+                                        </div>
+                                        <input 
+                                            style={styles.searchInput}
+                                            placeholder="Cerca tappe..."
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    {/* Category Filter */}
+                                    <div style={styles.filterContainer}>
+                                        <button 
+                                            style={{
+                                                ...styles.filterChip,
+                                                ...(selectedCategory === 'all' ? styles.filterChipActive : {})
+                                            }}
+                                            onClick={() => setSelectedCategory('all')}
+                                        >
+                                            Tutte
+                                        </button>
+                                        {EXPENSE_CATEGORIES.map(cat => (
+                                            <button 
+                                                key={cat.id}
+                                                style={{
+                                                    ...styles.filterChip,
+                                                    ...(selectedCategory === cat.id ? styles.filterChipActive : {})
+                                                }}
+                                                onClick={() => setSelectedCategory(cat.id)}
+                                            >
+                                                {cat.icon} {cat.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
                             {dates.length === 0 ? (
                                 <div style={styles.emptyState}>
                                     <div style={styles.emptyStateIcon}><Icon name="map" size={48} /></div>
@@ -943,23 +1166,67 @@
                                         <button style={{...styles.dateNavButton, ...(currentDateIndex === 0 ? styles.dateNavButtonDisabled : {})}} onClick={() => setCurrentDateIndex(Math.max(0, currentDateIndex - 1))} disabled={currentDateIndex === 0}>
                                             <Icon name="chevronLeft" size={20} />
                                         </button>
-                                        <span style={styles.dateText}>{dates[currentDateIndex]}</span>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <span style={styles.dateText}>{dates[currentDateIndex]}</span>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                                                ← Scorri per cambiare →
+                                            </div>
+                                        </div>
                                         <button style={{...styles.dateNavButton, ...(currentDateIndex === dates.length - 1 ? styles.dateNavButtonDisabled : {})}} onClick={() => setCurrentDateIndex(Math.min(dates.length - 1, currentDateIndex + 1))} disabled={currentDateIndex === dates.length - 1}>
                                             <Icon name="chevronRight" size={20} />
                                         </button>
                                     </div>
 
-                                    {currentDayTrips.map((trip, localIndex) => {
-                                        const globalIndex = getTripIndex(dates[currentDateIndex], localIndex);
+                                    {filteredDayTrips.length === 0 ? (
+                                        <div style={styles.noResults}>
+                                            <p>Nessuna tappa trovata</p>
+                                            <p style={{ fontSize: '13px', marginTop: '4px' }}>Prova a modificare i filtri</p>
+                                        </div>
+                                    ) : (
+                                    filteredDayTrips.map((trip, localIndex) => {
+                                        const originalIndex = currentDayTrips.indexOf(trip);
+                                        const globalIndex = getTripIndex(dates[currentDateIndex], originalIndex);
+                                        const isCompleted = trip['Completata'] === 'true';
                                         const categoryColor = getCategoryColor(trip['Categoria']);
                                         
                                         return (
-                                            <div key={localIndex} style={{ ...styles.card, borderLeftColor: categoryColor }}>
+                                            <div 
+                                                key={localIndex} 
+                                                style={{ 
+                                                    ...styles.card, 
+                                                    borderLeftColor: categoryColor,
+                                                    ...(isCompleted ? styles.completedCard : {}),
+                                                    ...(draggedIndex === globalIndex ? { opacity: 0.5 } : {})
+                                                }}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, globalIndex)}
+                                                onDragEnd={handleDragEnd}
+                                                onDragOver={handleDragOver}
+                                                onDrop={(e) => handleDrop(e, globalIndex)}
+                                            >
                                                 <div style={styles.cardHeader}>
-                                                    <h3 style={styles.cardTitle}>
-                                                        <span style={{ fontSize: '20px' }}>{getTransportIcon(trip.Mezzo)}</span>
-                                                        {trip.Luogo || 'Senza nome'}
-                                                    </h3>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                                                        <div style={styles.dragHandle}>
+                                                            <Icon name="grip" size={16} />
+                                                        </div>
+                                                        <button 
+                                                            style={{
+                                                                ...styles.completionToggle,
+                                                                ...(isCompleted ? styles.completionToggleActive : {}),
+                                                                color: isCompleted ? 'white' : 'transparent'
+                                                            }}
+                                                            onClick={() => handleToggleComplete(globalIndex)}
+                                                        >
+                                                            {isCompleted && <Icon name="check" size={16} />}
+                                                        </button>
+                                                        <h3 style={{
+                                                            ...styles.cardTitle,
+                                                            ...(isCompleted ? styles.completedTitle : {})
+                                                        }}>
+                                                            <span style={{ fontSize: '20px' }}>{getTransportIcon(trip.Mezzo)}</span>
+                                                            {trip.Luogo || 'Senza nome'}
+                                                        </h3>
+                                                    </div>
                                                     <div style={styles.cardActions}>
                                                         <button style={styles.actionButton} onClick={() => handleMoveTrip(globalIndex, -1)}><Icon name="arrowUp" size={16} /></button>
                                                         <button style={styles.actionButton} onClick={() => handleMoveTrip(globalIndex, 1)}><Icon name="arrowDown" size={16} /></button>
@@ -1041,7 +1308,8 @@
                                                 )}
                                             </div>
                                         );
-                                    })}
+                                    })
+                                    )}
                                 </>
                             )}
                         </div>

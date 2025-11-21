@@ -76,6 +76,84 @@
             min-height: 100vh;
             min-height: -webkit-fill-available;
         }
+
+        /* Smooth Animations */
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes checkBounce {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes swipeDelete {
+            to {
+                opacity: 0;
+                transform: translateX(-100%);
+            }
+        }
+
+        @keyframes swipeComplete {
+            to {
+                opacity: 0.6;
+                transform: translateX(20px);
+            }
+        }
+
+        .animate-in {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .animate-fade {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .animate-scale {
+            animation: scaleIn 0.2s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -116,6 +194,192 @@
             { id: 'teal', name: 'Azzurro', color: '#5AC8FA' },
         ];
 
+        // Translations
+        const TRANSLATIONS = {
+            it: {
+                // Common
+                save: 'Salva',
+                cancel: 'Annulla',
+                delete: 'Elimina',
+                edit: 'Modifica',
+                search: 'Cerca',
+                all: 'Tutte',
+                // Home
+                myTrip: 'Il Mio Viaggio',
+                stages: 'tappe',
+                stage: 'tappa',
+                totalKm: 'km totali',
+                people: 'persone',
+                completed: 'completate',
+                day: 'Giorno',
+                of: 'di',
+                searchStages: 'Cerca tappe...',
+                noTripLoaded: 'Nessun viaggio caricato',
+                noTripSubtext: 'Vai nelle impostazioni per importare un file CSV',
+                noResults: 'Nessuna tappa trovata',
+                noResultsSubtext: 'Prova a modificare i filtri',
+                newStage: 'Nuova Tappa',
+                editStage: 'Modifica Tappa',
+                // Fields
+                date: 'Data',
+                departureTime: 'Orario Partenza',
+                arrivalTime: 'Orario Arrivo',
+                transport: 'Mezzo di trasporto',
+                transportCost: 'Costo Mezzo',
+                mealCost: 'Costo Pasto',
+                hotelCost: 'Costo Hotel',
+                activityCost: 'Costo Attività',
+                place: 'Luogo',
+                description: 'Descrizione',
+                expenseCategory: 'Categoria spesa',
+                miscCosts: 'Costi Vari',
+                distance: 'Distanza (km)',
+                mapsLink: 'Link Google Maps',
+                notes: 'Note',
+                position: 'Posizione',
+                map: 'Mappa',
+                navigate: 'Naviga',
+                // Costs
+                costs: 'Costi',
+                expensesSummary: 'Riepilogo spese',
+                tripTotal: 'Totale Viaggio',
+                budget: 'Budget',
+                remaining: 'rimanenti',
+                overBudget: 'oltre budget',
+                transportsCost: 'Costi Mezzi',
+                mealsCost: 'Costi Pasti',
+                hotelsCost: 'Costi Hotel',
+                activitiesCost: 'Costi Attività',
+                miscCost: 'Costi Vari',
+                byExpenseType: 'Per Tipo di Spesa',
+                byDay: 'Per Giornata',
+                statistics: 'Statistiche',
+                avgPerDay: 'Media Giornaliera',
+                mostExpensiveDay: 'Giorno più costoso',
+                cheapestDay: 'Giorno più economico',
+                kmPerTransport: 'Km per mezzo',
+                // Settings
+                settings: 'Impostazioni',
+                customizeApp: 'Personalizza l\'app',
+                tripName: 'Nome del viaggio',
+                totalBudget: 'Budget totale',
+                currency: 'Valuta',
+                multiPersonCalc: 'Calcolo per più persone',
+                numPeople: 'Numero di persone',
+                multiplyFor: 'Moltiplica per',
+                transports: 'Mezzi',
+                meals: 'Pasti',
+                hotels: 'Hotel',
+                activities: 'Attività',
+                misc: 'Vari',
+                themeColor: 'Colore tema',
+                darkMode: 'Modalità scura',
+                language: 'Lingua',
+                importCSV: 'Importa CSV',
+                exportCSV: 'Esporta CSV',
+                deleteAllData: 'Elimina tutti i dati',
+                deleteConfirm: 'Sei sicuro di voler eliminare tutti i dati?',
+                // Tabs
+                trip: 'Viaggio',
+                weather: 'Meteo',
+                // Weather
+                loading: 'Caricamento...',
+                noWeatherData: 'Nessun dato meteo disponibile',
+                addLocationForWeather: 'Aggiungi luoghi alle tappe per vedere il meteo'
+            },
+            en: {
+                // Common
+                save: 'Save',
+                cancel: 'Cancel',
+                delete: 'Delete',
+                edit: 'Edit',
+                search: 'Search',
+                all: 'All',
+                // Home
+                myTrip: 'My Trip',
+                stages: 'stops',
+                stage: 'stop',
+                totalKm: 'total km',
+                people: 'people',
+                completed: 'completed',
+                day: 'Day',
+                of: 'of',
+                searchStages: 'Search stops...',
+                noTripLoaded: 'No trip loaded',
+                noTripSubtext: 'Go to settings to import a CSV file',
+                noResults: 'No stops found',
+                noResultsSubtext: 'Try changing the filters',
+                newStage: 'New Stop',
+                editStage: 'Edit Stop',
+                // Fields
+                date: 'Date',
+                departureTime: 'Departure Time',
+                arrivalTime: 'Arrival Time',
+                transport: 'Transport',
+                transportCost: 'Transport Cost',
+                mealCost: 'Meal Cost',
+                hotelCost: 'Hotel Cost',
+                activityCost: 'Activity Cost',
+                place: 'Place',
+                description: 'Description',
+                expenseCategory: 'Expense Category',
+                miscCosts: 'Misc Costs',
+                distance: 'Distance (km)',
+                mapsLink: 'Google Maps Link',
+                notes: 'Notes',
+                position: 'Position',
+                map: 'Map',
+                navigate: 'Navigate',
+                // Costs
+                costs: 'Costs',
+                expensesSummary: 'Expenses Summary',
+                tripTotal: 'Trip Total',
+                budget: 'Budget',
+                remaining: 'remaining',
+                overBudget: 'over budget',
+                transportsCost: 'Transport Costs',
+                mealsCost: 'Meal Costs',
+                hotelsCost: 'Hotel Costs',
+                activitiesCost: 'Activity Costs',
+                miscCost: 'Misc Costs',
+                byExpenseType: 'By Expense Type',
+                byDay: 'By Day',
+                statistics: 'Statistics',
+                avgPerDay: 'Daily Average',
+                mostExpensiveDay: 'Most Expensive Day',
+                cheapestDay: 'Cheapest Day',
+                kmPerTransport: 'Km by transport',
+                // Settings
+                settings: 'Settings',
+                customizeApp: 'Customize app',
+                tripName: 'Trip name',
+                totalBudget: 'Total budget',
+                currency: 'Currency',
+                multiPersonCalc: 'Multi-person calculation',
+                numPeople: 'Number of people',
+                multiplyFor: 'Multiply for',
+                transports: 'Transports',
+                meals: 'Meals',
+                hotels: 'Hotels',
+                activities: 'Activities',
+                misc: 'Misc',
+                themeColor: 'Theme color',
+                darkMode: 'Dark mode',
+                language: 'Language',
+                importCSV: 'Import CSV',
+                exportCSV: 'Export CSV',
+                deleteAllData: 'Delete all data',
+                deleteConfirm: 'Are you sure you want to delete all data?',
+                // Tabs
+                trip: 'Trip',
+                weather: 'Weather',
+                // Weather
+                loading: 'Loading...',
+                noWeatherData: 'No weather data available',
+                addLocationForWeather: 'Add locations to stops to see weather'
+            }
+        };
+
         // Utility functions
         const parseCSV = (csvText) => {
             const lines = csvText.trim().split('\n');
@@ -138,7 +402,7 @@
 
         const generateCSV = (trips) => {
             if (trips.length === 0) return '';
-            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza', 'Completata'];
+            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza', 'Completata', 'Note'];
             const lines = [headers.join(';')];
             
             trips.forEach(trip => {
@@ -225,6 +489,9 @@
             });
             const [searchQuery, setSearchQuery] = useState('');
             const [selectedCategory, setSelectedCategory] = useState('all');
+            const [language, setLanguage] = useState('it');
+            const [weatherData, setWeatherData] = useState({});
+            const [swipingCard, setSwipingCard] = useState(null);
             const fileInputRef = useRef(null);
 
             const currencies = [
@@ -255,6 +522,7 @@
                 const savedAccentColor = localStorage.getItem('travelManagerAccentColor');
                 const savedNumPersone = localStorage.getItem('travelManagerNumPersone');
                 const savedMoltiplicatori = localStorage.getItem('travelManagerMoltiplicatori');
+                const savedLanguage = localStorage.getItem('travelManagerLanguage');
                 
                 if (savedTrips) setTrips(JSON.parse(savedTrips));
                 if (savedDarkMode) setDarkMode(JSON.parse(savedDarkMode));
@@ -264,6 +532,7 @@
                 if (savedAccentColor) setAccentColor(savedAccentColor);
                 if (savedNumPersone) setNumPersone(parseInt(savedNumPersone));
                 if (savedMoltiplicatori) setMoltiplicatori(JSON.parse(savedMoltiplicatori));
+                if (savedLanguage) setLanguage(savedLanguage);
             }, []);
 
             // Save to localStorage
@@ -274,7 +543,8 @@
             useEffect(() => {
                 localStorage.setItem('travelManagerDarkMode', JSON.stringify(darkMode));
                 document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
-            }, [darkMode]);
+                document.documentElement.setAttribute('lang', language);
+            }, [darkMode, language]);
 
             useEffect(() => {
                 localStorage.setItem('travelManagerTripTitle', tripTitle);
@@ -300,6 +570,47 @@
             useEffect(() => {
                 localStorage.setItem('travelManagerMoltiplicatori', JSON.stringify(moltiplicatori));
             }, [moltiplicatori]);
+
+            useEffect(() => {
+                localStorage.setItem('travelManagerLanguage', language);
+            }, [language]);
+
+            // Translation helper
+            const t = (key) => TRANSLATIONS[language][key] || key;
+
+            // Fetch weather data for trips
+            useEffect(() => {
+                const fetchWeather = async () => {
+                    const uniqueLocations = [...new Set(trips.map(trip => trip.Luogo).filter(Boolean))];
+                    if (uniqueLocations.length === 0) return;
+
+                    const weatherResults = {};
+                    for (const location of uniqueLocations) {
+                        try {
+                            // Geocoding to get coordinates
+                            const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=${language}`);
+                            const geoData = await geoResponse.json();
+                            
+                            if (geoData.results && geoData.results.length > 0) {
+                                const { latitude, longitude } = geoData.results[0];
+                                
+                                // Get weather forecast
+                                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`);
+                                const weatherInfo = await weatherResponse.json();
+                                
+                                weatherResults[location] = weatherInfo.daily;
+                            }
+                        } catch (error) {
+                            console.error(`Error fetching weather for ${location}:`, error);
+                        }
+                    }
+                    setWeatherData(weatherResults);
+                };
+
+                if (trips.length > 0) {
+                    fetchWeather();
+                }
+            }, [trips, language]);
 
             const groupedTrips = groupByDate(trips);
             const dates = Object.keys(groupedTrips);
@@ -963,7 +1274,8 @@
                     'Maps': '',
                     'Categoria': 'altro',
                     'Distanza': '',
-                    'Completata': 'false'
+                    'Completata': 'false',
+                    'Note': ''
                 });
 
                 const handleChange = (field, value) => {
@@ -1031,9 +1343,17 @@
                             <label style={styles.inputLabel}>Link Google Maps</label>
                             <input style={styles.input} value={formData['Maps']} onChange={e => handleChange('Maps', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
                             
-                            <button style={{ ...styles.button, ...styles.primaryButton, marginTop: '8px' }} onClick={() => onSave(formData)}>
+                            <label style={styles.inputLabel}>{t('notes')}</label>
+                            <textarea 
+                                style={{...styles.input, minHeight: '80px', fontFamily: 'inherit', resize: 'vertical'}} 
+                                value={formData['Note']} 
+                                onChange={e => handleChange('Note', e.target.value)} 
+                                placeholder={t('notes')}
+                            />
+                            
+                            <button type="button" style={{ ...styles.button, ...styles.primaryButton, marginTop: '8px' }} onClick={() => onSave(formData)}>
                                 <Icon name="check" size={20} />
-                                Salva
+                                {t('save')}
                             </button>
                         </div>
                     </div>
@@ -1529,11 +1849,17 @@
                             </div>
 
                             <div style={styles.settingsItem}>
-                                <span style={styles.settingsLabel}>Modalità scura</span>
-                                <button style={{...styles.toggle, background: darkMode ? 'var(--accent)' : 'var(--separator)'}} onClick={() => setDarkMode(!darkMode)}>
+                                <span style={styles.settingsLabel}>{t('darkMode')}</span>
+                                <button type="button" style={{...styles.toggle, background: darkMode ? 'var(--accent)' : 'var(--separator)'}} onClick={() => setDarkMode(!darkMode)}>
                                     <div style={{...styles.toggleThumb, left: darkMode ? '22px' : '2px'}} />
                                 </button>
                             </div>
+
+                            <label style={styles.inputLabel}>{t('language')}</label>
+                            <select style={{ ...styles.input, cursor: 'pointer' }} value={language} onChange={e => setLanguage(e.target.value)}>
+                                <option value="it">🇮🇹 Italiano</option>
+                                <option value="en">🇬🇧 English</option>
+                            </select>
 
                             <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} style={{ display: 'none' }} />
                             

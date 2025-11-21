@@ -1286,61 +1286,61 @@
                     <div style={styles.modal} onClick={onClose}>
                         <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
                             <div style={styles.modalHeader}>
-                                <h2 style={styles.modalTitle}>{isNew ? 'Nuova Tappa' : 'Modifica Tappa'}</h2>
+                                <h2 style={styles.modalTitle}>{isNew ? t('newStage') : t('editStage')}</h2>
                                 <button style={styles.actionButton} onClick={onClose}>
                                     <Icon name="x" size={20} />
                                 </button>
                             </div>
                             
-                            <label style={styles.inputLabel}>Data</label>
+                            <label style={styles.inputLabel}>{t('date')}</label>
                             <input style={styles.input} value={formData['Data']} onChange={e => handleChange('Data', e.target.value)} placeholder="es. 27/11" />
                             
-                            <label style={styles.inputLabel}>Orario Partenza</label>
+                            <label style={styles.inputLabel}>{t('departureTime')}</label>
                             <input style={styles.input} value={formData['Orario Partenza']} onChange={e => handleChange('Orario Partenza', e.target.value)} placeholder="es. 9:45" />
                             
-                            <label style={styles.inputLabel}>Orario Arrivo</label>
+                            <label style={styles.inputLabel}>{t('arrivalTime')}</label>
                             <input style={styles.input} value={formData['Orario Arrivo']} onChange={e => handleChange('Orario Arrivo', e.target.value)} placeholder="es. 11:15" />
                             
-                            <label style={styles.inputLabel}>Mezzo di trasporto</label>
+                            <label style={styles.inputLabel}>{t('transport')}</label>
                             <select style={{ ...styles.input, cursor: 'pointer' }} value={formData['Mezzo']} onChange={e => handleChange('Mezzo', e.target.value)}>
-                                <option value="">Seleziona...</option>
+                                <option value="">{t('search')}...</option>
                                 {TRANSPORT_TYPES.map(t => (
                                     <option key={t.id} value={t.name}>{t.icon} {t.name}</option>
                                 ))}
                             </select>
                             
-                            <label style={styles.inputLabel}>Costo Mezzo ({currency})</label>
+                            <label style={styles.inputLabel}>{t('transportCost')} ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costo Mezzo']} onChange={e => handleChange('Costo Mezzo', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Costo Pasto ({currency})</label>
+                            <label style={styles.inputLabel}>{t('mealCost')} ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costo Pasto']} onChange={e => handleChange('Costo Pasto', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Costo Hotel ({currency})</label>
+                            <label style={styles.inputLabel}>{t('hotelCost')} ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costo Hotel']} onChange={e => handleChange('Costo Hotel', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Costo Attività ({currency})</label>
+                            <label style={styles.inputLabel}>{t('activityCost')} ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costo Attività']} onChange={e => handleChange('Costo Attività', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Luogo</label>
-                            <input style={styles.input} value={formData['Luogo']} onChange={e => handleChange('Luogo', e.target.value)} placeholder="Nome del luogo" />
+                            <label style={styles.inputLabel}>{t('place')}</label>
+                            <input style={styles.input} value={formData['Luogo']} onChange={e => handleChange('Luogo', e.target.value)} placeholder={t('place')} />
                             
-                            <label style={styles.inputLabel}>Descrizione</label>
-                            <input style={styles.input} value={formData['Descrizione']} onChange={e => handleChange('Descrizione', e.target.value)} placeholder="Descrizione attività" />
+                            <label style={styles.inputLabel}>{t('description')}</label>
+                            <input style={styles.input} value={formData['Descrizione']} onChange={e => handleChange('Descrizione', e.target.value)} placeholder={t('description')} />
                             
-                            <label style={styles.inputLabel}>Categoria spesa</label>
+                            <label style={styles.inputLabel}>{t('expenseCategory')}</label>
                             <select style={{ ...styles.input, cursor: 'pointer' }} value={formData['Categoria']} onChange={e => handleChange('Categoria', e.target.value)}>
                                 {EXPENSE_CATEGORIES.map(cat => (
                                     <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
                                 ))}
                             </select>
                             
-                            <label style={styles.inputLabel}>Costi Vari ({currency})</label>
+                            <label style={styles.inputLabel}>{t('miscCosts')} ({currency})</label>
                             <input style={styles.input} type="number" value={formData['Costi Vari']} onChange={e => handleChange('Costi Vari', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Distanza (km)</label>
+                            <label style={styles.inputLabel}>{t('distance')}</label>
                             <input style={styles.input} type="number" value={formData['Distanza']} onChange={e => handleChange('Distanza', e.target.value)} placeholder="0" />
                             
-                            <label style={styles.inputLabel}>Link Google Maps</label>
+                            <label style={styles.inputLabel}>{t('mapsLink')}</label>
                             <input style={styles.input} value={formData['Maps']} onChange={e => handleChange('Maps', e.target.value)} placeholder="https://maps.app.goo.gl/..." />
                             
                             <label style={styles.inputLabel}>{t('notes')}</label>
@@ -1378,31 +1378,80 @@
                         <div style={styles.header}>
                             <h1 style={styles.headerTitle}>{tripTitle}</h1>
                             <p style={styles.headerSubtitle}>
-                                {trips.length} {trips.length === 1 ? 'tappa' : 'tappe'} • {totalDistance.toFixed(1)} km totali
+                                {trips.length} {trips.length === 1 ? t('stage') : t('stages')} • {totalDistance.toFixed(1)} {t('totalKm')}
                             </p>
                             {dates.length > 0 && (
-                                <div style={{ 
-                                    marginTop: '12px', 
-                                    padding: '12px', 
-                                    background: 'var(--accent)', 
-                                    borderRadius: '12px', 
-                                    color: 'white',
-                                    textAlign: 'center'
-                                }}>
-                                    <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                                        {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} persone` : ''} • {completedCount}/{currentDayTrips.length} ✓
+                                <>
+                                    <div style={{ 
+                                        marginTop: '12px', 
+                                        padding: '12px', 
+                                        background: 'var(--accent)', 
+                                        borderRadius: '12px', 
+                                        color: 'white',
+                                        textAlign: 'center'
+                                    }}>
+                                        <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+                                            {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} ${t('people')}` : ''} • {completedCount}/{currentDayTrips.length} ✓
+                                        </div>
+                                        <div style={{ fontSize: '22px', fontWeight: '700' }}>
+                                            {currency}{dayTotalCost.toFixed(2)}
+                                        </div>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.9 }}>
+                                            {dayMezzoCost > 0 && <span>🚗{currency}{dayMezzoCost.toFixed(0)}</span>}
+                                            {dayPastoCost > 0 && <span>🍽️{currency}{dayPastoCost.toFixed(0)}</span>}
+                                            {dayHotelCost > 0 && <span>🏨{currency}{dayHotelCost.toFixed(0)}</span>}
+                                            {dayAttivitaCost > 0 && <span>🎯{currency}{dayAttivitaCost.toFixed(0)}</span>}
+                                            {dayVariCost > 0 && <span>📦{currency}{dayVariCost.toFixed(0)}</span>}
+                                        </div>
                                     </div>
-                                    <div style={{ fontSize: '22px', fontWeight: '700' }}>
-                                        {currency}{dayTotalCost.toFixed(2)}
-                                    </div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.9 }}>
-                                        {dayMezzoCost > 0 && <span>🚗{currency}{dayMezzoCost.toFixed(0)}</span>}
-                                        {dayPastoCost > 0 && <span>🍽️{currency}{dayPastoCost.toFixed(0)}</span>}
-                                        {dayHotelCost > 0 && <span>🏨{currency}{dayHotelCost.toFixed(0)}</span>}
-                                        {dayAttivitaCost > 0 && <span>🎯{currency}{dayAttivitaCost.toFixed(0)}</span>}
-                                        {dayVariCost > 0 && <span>📦{currency}{dayVariCost.toFixed(0)}</span>}
-                                    </div>
-                                </div>
+
+                                    {/* Weather Widget */}
+                                    {currentDayTrips.length > 0 && currentDayTrips[0].Luogo && weatherData[currentDayTrips[0].Luogo] && (
+                                        <div style={{ 
+                                            marginTop: '12px', 
+                                            padding: '12px', 
+                                            background: 'var(--bg-secondary)', 
+                                            borderRadius: '12px',
+                                            border: '1px solid var(--separator)'
+                                        }}>
+                                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                                                ☀️ {t('weather')} - {currentDayTrips[0].Luogo}
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }}>
+                                                {weatherData[currentDayTrips[0].Luogo].time.slice(0, 7).map((date, idx) => {
+                                                    const weatherCode = weatherData[currentDayTrips[0].Luogo].weathercode[idx];
+                                                    const tempMax = weatherData[currentDayTrips[0].Luogo].temperature_2m_max[idx];
+                                                    const tempMin = weatherData[currentDayTrips[0].Luogo].temperature_2m_min[idx];
+                                                    const weatherIcon = weatherCode === 0 ? '☀️' : 
+                                                                       weatherCode <= 3 ? '⛅' : 
+                                                                       weatherCode <= 48 ? '🌫️' : 
+                                                                       weatherCode <= 67 ? '🌧️' : 
+                                                                       weatherCode <= 77 ? '❄️' : '⛈️';
+                                                    return (
+                                                        <div key={idx} style={{ 
+                                                            minWidth: '60px', 
+                                                            textAlign: 'center',
+                                                            padding: '8px',
+                                                            background: 'var(--bg-tertiary)',
+                                                            borderRadius: '8px'
+                                                        }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
+                                                                {new Date(date).getDate()}/{new Date(date).getMonth() + 1}
+                                                            </div>
+                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>{weatherIcon}</div>
+                                                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                                {Math.round(tempMax)}°
+                                                            </div>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                                                                {Math.round(tempMin)}°
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                         
@@ -1417,7 +1466,7 @@
                                         <input 
                                             type="text"
                                             style={styles.searchInput}
-                                            placeholder="Cerca tappe..."
+                                            placeholder={t('searchStages')}
                                             value={searchQuery}
                                             onChange={e => setSearchQuery(e.target.value)}
                                         />
@@ -1433,7 +1482,7 @@
                                             }}
                                             onClick={() => setSelectedCategory('all')}
                                         >
-                                            Tutte
+                                            {t('all')}
                                         </button>
                                         {EXPENSE_CATEGORIES.map(cat => (
                                             <button 
@@ -1455,8 +1504,8 @@
                             {dates.length === 0 ? (
                                 <div style={styles.emptyState}>
                                     <div style={styles.emptyStateIcon}><Icon name="map" size={48} /></div>
-                                    <p style={styles.emptyStateText}>Nessun viaggio caricato</p>
-                                    <p style={styles.emptyStateSubtext}>Vai nelle impostazioni per importare un file CSV</p>
+                                    <p style={styles.emptyStateText}>{t('noTripLoaded')}</p>
+                                    <p style={styles.emptyStateSubtext}>{t('noTripSubtext')}</p>
                                 </div>
                             ) : (
                                 <>
@@ -1467,7 +1516,7 @@
                                         <div style={{ textAlign: 'center' }}>
                                             <span style={styles.dateText}>{dates[currentDateIndex]}</span>
                                             <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
-                                                Giorno {currentDateIndex + 1} di {dates.length}
+                                                {t('day')} {currentDateIndex + 1} {t('of')} {dates.length}
                                             </div>
                                         </div>
                                         <button type="button" style={{...styles.dateNavButton, ...(currentDateIndex === dates.length - 1 ? styles.dateNavButtonDisabled : {})}} onClick={() => setCurrentDateIndex(Math.min(dates.length - 1, currentDateIndex + 1))} disabled={currentDateIndex === dates.length - 1}>
@@ -1484,8 +1533,8 @@
                                     >
                                     {filteredDayTrips.length === 0 ? (
                                         <div style={styles.noResults}>
-                                            <p>Nessuna tappa trovata</p>
-                                            <p style={{ fontSize: '13px', marginTop: '4px' }}>Prova a modificare i filtri</p>
+                                            <p>{t('noResults')}</p>
+                                            <p style={{ fontSize: '13px', marginTop: '4px' }}>{t('noResultsSubtext')}</p>
                                         </div>
                                     ) : (
                                     filteredDayTrips.map((trip, localIndex) => {
@@ -1533,72 +1582,78 @@
                                                 </div>
                                                 
                                                 <div style={styles.cardRow}>
-                                                    <span style={styles.cardLabel}>Partenza</span>
+                                                    <span style={styles.cardLabel}>{t('departureTime')}</span>
                                                     <span style={styles.cardValue}>{formatTime(trip['Orario Partenza'])}</span>
                                                 </div>
                                                 <div style={styles.cardRow}>
-                                                    <span style={styles.cardLabel}>Arrivo</span>
+                                                    <span style={styles.cardLabel}>{t('arrivalTime')}</span>
                                                     <span style={styles.cardValue}>{formatTime(trip['Orario Arrivo'])}</span>
                                                 </div>
                                                 {trip.Mezzo && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>Mezzo</span>
+                                                        <span style={styles.cardLabel}>{t('transport')}</span>
                                                         <span style={styles.cardValue}>{trip.Mezzo}</span>
                                                     </div>
                                                 )}
                                                 {trip.Descrizione && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>Descrizione</span>
+                                                        <span style={styles.cardLabel}>{t('description')}</span>
                                                         <span style={styles.cardValue}>{trip.Descrizione}</span>
                                                     </div>
                                                 )}
                                                 {trip['Distanza'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>Distanza</span>
+                                                        <span style={styles.cardLabel}>{t('distance')}</span>
                                                         <span style={styles.cardValue}>{trip['Distanza']} km</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Mezzo'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>🚗 Mezzo</span>
+                                                        <span style={styles.cardLabel}>🚗 {t('transports')}</span>
                                                         <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Mezzo').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Pasto'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>🍽️ Pasto</span>
+                                                        <span style={styles.cardLabel}>🍽️ {t('meals')}</span>
                                                         <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Pasto').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Hotel'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>🏨 Hotel</span>
+                                                        <span style={styles.cardLabel}>🏨 {t('hotels')}</span>
                                                         <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Hotel').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costo Attività'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>🎯 Attività</span>
+                                                        <span style={styles.cardLabel}>🎯 {t('activities')}</span>
                                                         <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costo Attività').toFixed(0)}</span>
                                                     </div>
                                                 )}
                                                 {trip['Costi Vari'] && (
                                                     <div style={styles.cardRow}>
-                                                        <span style={styles.cardLabel}>📦 Vari</span>
+                                                        <span style={styles.cardLabel}>📦 {t('misc')}</span>
                                                         <span style={styles.cardValue}>{currency}{getCostWithMultiplier(trip, 'Costi Vari').toFixed(0)}</span>
+                                                    </div>
+                                                )}
+                                                {trip['Note'] && (
+                                                    <div style={styles.cardRow}>
+                                                        <span style={styles.cardLabel}>📝 {t('notes')}</span>
+                                                        <span style={{...styles.cardValue, whiteSpace: 'pre-wrap', textAlign: 'left'}}>{trip['Note']}</span>
                                                     </div>
                                                 )}
                                                 {trip.Maps && (
                                                     <div style={{ ...styles.cardRow, ...styles.cardRowLast }}>
-                                                        <span style={styles.cardLabel}>Posizione</span>
+                                                        <span style={styles.cardLabel}>{t('position')}</span>
                                                         <div style={{ display: 'flex', gap: '8px' }}>
                                                             <a href={trip.Maps} target="_blank" rel="noopener noreferrer" style={styles.mapLink}>
                                                                 <Icon name="map" size={16} />
-                                                                Mappa
+                                                                {t('map')}
                                                             </a>
                                                             <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.Luogo)}&travelmode=transit`} target="_blank" rel="noopener noreferrer" style={{ ...styles.mapLink, color: 'var(--success)' }}>
                                                                 <Icon name="navigation" size={16} />
-                                                                Naviga
+                                                                {t('navigate')}
                                                             </a>
                                                         </div>
                                                     </div>
@@ -1648,22 +1703,22 @@
                 return (
                     <>
                         <div style={styles.header}>
-                            <h1 style={styles.headerTitle}>Costi</h1>
-                            <p style={styles.headerSubtitle}>Riepilogo spese{numPersone > 1 ? ` per ${numPersone} persone` : ''}</p>
+                            <h1 style={styles.headerTitle}>{t('costs')}</h1>
+                            <p style={styles.headerSubtitle}>{t('expensesSummary')}{numPersone > 1 ? ` ${t('multiplyFor')} ${numPersone} ${t('people')}` : ''}</p>
                         </div>
                         
                         <div style={styles.content}>
                             <div style={styles.dayCost}>
-                                <p style={styles.dayCostLabel}>Totale Viaggio</p>
+                                <p style={styles.dayCostLabel}>{t('tripTotal')}</p>
                                 <p style={styles.dayCostValue}>{currency}{totalCosts.toFixed(2)}</p>
                             </div>
 
                             {budget > 0 && (
                                 <div style={styles.budgetBar}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>Budget</span>
+                                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{t('budget')}</span>
                                         <span style={{ fontSize: '14px', fontWeight: '600', color: budgetRemaining >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                                            {budgetRemaining >= 0 ? `${currency}${budgetRemaining.toFixed(2)} rimanenti` : `${currency}${Math.abs(budgetRemaining).toFixed(2)} oltre budget`}
+                                            {budgetRemaining >= 0 ? `${currency}${budgetRemaining.toFixed(2)} ${t('remaining')}` : `${currency}${Math.abs(budgetRemaining).toFixed(2)} ${t('overBudget')}`}
                                         </span>
                                     </div>
                                     <div style={styles.budgetProgress}>
@@ -1678,41 +1733,102 @@
                             <div style={styles.totalCard}>
                                 {totalMezzo > 0 && (
                                     <div style={styles.totalRow}>
-                                        <span style={styles.cardLabel}>🚗 Costi Mezzi</span>
+                                        <span style={styles.cardLabel}>🚗 {t('transportsCost')}</span>
                                         <span style={styles.cardValue}>{currency}{totalMezzo.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {totalPasto > 0 && (
                                     <div style={styles.totalRow}>
-                                        <span style={styles.cardLabel}>🍽️ Costi Pasti</span>
+                                        <span style={styles.cardLabel}>🍽️ {t('mealsCost')}</span>
                                         <span style={styles.cardValue}>{currency}{totalPasto.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {totalHotel > 0 && (
                                     <div style={styles.totalRow}>
-                                        <span style={styles.cardLabel}>🏨 Costi Hotel</span>
+                                        <span style={styles.cardLabel}>🏨 {t('hotelsCost')}</span>
                                         <span style={styles.cardValue}>{currency}{totalHotel.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {totalAttivita > 0 && (
                                     <div style={styles.totalRow}>
-                                        <span style={styles.cardLabel}>🎯 Costi Attività</span>
+                                        <span style={styles.cardLabel}>🎯 {t('activitiesCost')}</span>
                                         <span style={styles.cardValue}>{currency}{totalAttivita.toFixed(2)}</span>
                                     </div>
                                 )}
                                 {totalVari > 0 && (
                                     <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
-                                        <span style={styles.cardLabel}>📦 Costi Vari</span>
+                                        <span style={styles.cardLabel}>📦 {t('miscCost')}</span>
                                         <span style={styles.cardValue}>{currency}{totalVari.toFixed(2)}</span>
                                     </div>
                                 )}
                             </div>
 
+                            {/* Advanced Statistics */}
+                            {trips.length > 0 && dates.length > 0 && (
+                                <div style={styles.totalCard}>
+                                    <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>
+                                        📊 {t('statistics')}
+                                    </h3>
+                                    
+                                    <div style={styles.totalRow}>
+                                        <span style={styles.cardLabel}>💰 {t('avgPerDay')}</span>
+                                        <span style={styles.cardValue}>{currency}{(totalCosts / dates.length).toFixed(2)}</span>
+                                    </div>
+                                    
+                                    {(() => {
+                                        const dayCosts = dates.map(date => ({
+                                            date,
+                                            cost: getDayCostWithMultiplier(groupedTrips[date])
+                                        }));
+                                        const mostExpensiveDay = dayCosts.reduce((max, day) => day.cost > max.cost ? day : max, dayCosts[0]);
+                                        const cheapestDay = dayCosts.reduce((min, day) => day.cost < min.cost && day.cost > 0 ? day : min, dayCosts[0]);
+                                        
+                                        return (
+                                            <>
+                                                <div style={styles.totalRow}>
+                                                    <span style={styles.cardLabel}>📈 {t('mostExpensiveDay')}</span>
+                                                    <span style={styles.cardValue}>{mostExpensiveDay.date} ({currency}{mostExpensiveDay.cost.toFixed(2)})</span>
+                                                </div>
+                                                <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
+                                                    <span style={styles.cardLabel}>📉 {t('cheapestDay')}</span>
+                                                    <span style={styles.cardValue}>{cheapestDay.date} ({currency}{cheapestDay.cost.toFixed(2)})</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* Km per Transport Type */}
+                            {trips.some(t => t.Mezzo && parseFloat(t.Distanza) > 0) && (
+                                <div style={styles.totalCard}>
+                                    <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>
+                                        🚗 {t('kmPerTransport')}
+                                    </h3>
+                                    {(() => {
+                                        const kmByTransport = {};
+                                        trips.forEach(trip => {
+                                            if (trip.Mezzo && trip.Distanza) {
+                                                const mezzo = trip.Mezzo;
+                                                kmByTransport[mezzo] = (kmByTransport[mezzo] || 0) + parseFloat(trip.Distanza);
+                                            }
+                                        });
+                                        
+                                        return Object.entries(kmByTransport).map(([mezzo, km], idx, arr) => (
+                                            <div key={mezzo} style={{ ...styles.totalRow, borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--separator)' }}>
+                                                <span style={styles.cardLabel}>{getTransportIcon(mezzo)} {mezzo}</span>
+                                                <span style={styles.cardValue}>{km.toFixed(1)} km</span>
+                                            </div>
+                                        ));
+                                    })()}
+                                </div>
+                            )}
+
                             {costBreakdown.length > 0 && (
                                 <div style={styles.chartContainer}>
                                     <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>
                                         <Icon name="pieChart" size={20} />
-                                        Per Tipo di Spesa
+                                        {t('byExpenseType')}
                                     </h3>
                                     {costBreakdown.map(item => (
                                         <div key={item.name} style={styles.chartBar}>
@@ -1727,7 +1843,7 @@
                                 </div>
                             )}
 
-                            <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>Per Giornata</h3>
+                            <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>{t('byDay')}</h3>
                             {dates.map(date => {
                                 const dayCost = getDayCostWithMultiplier(groupedTrips[date]);
                                 const dayDistance = groupedTrips[date].reduce((acc, trip) => acc + (parseFloat(trip['Distanza']) || 0), 0);
@@ -1773,32 +1889,32 @@
                 return (
                     <>
                         <div style={styles.header}>
-                            <h1 style={styles.headerTitle}>Impostazioni</h1>
-                            <p style={styles.headerSubtitle}>Personalizza l'app</p>
+                            <h1 style={styles.headerTitle}>{t('settings')}</h1>
+                            <p style={styles.headerSubtitle}>{t('customizeApp')}</p>
                         </div>
                         
                         <div style={styles.content}>
-                            <label style={styles.inputLabel}>Nome del viaggio</label>
+                            <label style={styles.inputLabel}>{t('tripName')}</label>
                             <input 
                                 style={styles.input} 
                                 value={localTitle} 
                                 onChange={e => setLocalTitle(e.target.value)} 
                                 onBlur={handleTitleBlur}
-                                placeholder="Es. Viaggio in Giappone" 
+                                placeholder={t('tripName')}
                             />
 
-                            <label style={styles.inputLabel}>Budget totale ({currency})</label>
+                            <label style={styles.inputLabel}>{t('totalBudget')} ({currency})</label>
                             <input style={styles.input} type="number" value={budget || ''} onChange={e => setBudget(parseFloat(e.target.value) || 0)} placeholder="0" />
 
-                            <label style={styles.inputLabel}>Valuta</label>
+                            <label style={styles.inputLabel}>{t('currency')}</label>
                             <select style={{ ...styles.input, cursor: 'pointer' }} value={currency} onChange={e => setCurrency(e.target.value)}>
                                 {currencies.map(curr => (<option key={curr.symbol} value={curr.symbol}>{curr.symbol} - {curr.name}</option>))}
                             </select>
 
                             <div style={{ ...styles.totalCard, marginTop: '8px' }}>
-                                <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>👥 Calcolo per più persone</h3>
+                                <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>👥 {t('multiPersonCalc')}</h3>
                                 
-                                <label style={styles.inputLabel}>Numero di persone</label>
+                                <label style={styles.inputLabel}>{t('numPeople')}</label>
                                 <input 
                                     style={{ ...styles.input, marginBottom: '16px' }} 
                                     type="number" 
@@ -1808,14 +1924,14 @@
                                     onBlur={handleNumPersoneBlur}
                                 />
                                 
-                                <label style={styles.inputLabel}>Moltiplica per {numPersone} persone:</label>
+                                <label style={styles.inputLabel}>{t('multiplyFor')} {numPersone} {t('people')}:</label>
                                 
                                 {[
-                                    { field: 'Costo Mezzo', icon: '🚗', label: 'Mezzi' },
-                                    { field: 'Costo Pasto', icon: '🍽️', label: 'Pasti' },
-                                    { field: 'Costo Hotel', icon: '🏨', label: 'Hotel' },
-                                    { field: 'Costo Attività', icon: '🎯', label: 'Attività' },
-                                    { field: 'Costi Vari', icon: '📦', label: 'Vari' }
+                                    { field: 'Costo Mezzo', icon: '🚗', label: t('transports') },
+                                    { field: 'Costo Pasto', icon: '🍽️', label: t('meals') },
+                                    { field: 'Costo Hotel', icon: '🏨', label: t('hotels') },
+                                    { field: 'Costo Attività', icon: '🎯', label: t('activities') },
+                                    { field: 'Costi Vari', icon: '📦', label: t('misc') }
                                 ].map(item => (
                                     <div key={item.field} style={{ ...styles.settingsItem, marginBottom: '8px', padding: '12px' }}>
                                         <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{item.icon} {item.label}</span>
@@ -1839,7 +1955,7 @@
                                 ))}
                             </div>
 
-                            <label style={styles.inputLabel}>Colore tema</label>
+                            <label style={styles.inputLabel}>{t('themeColor')}</label>
                             <div style={styles.colorPicker}>
                                 {ACCENT_COLORS.map(color => (
                                     <div key={color.id} style={{...styles.colorOption, background: color.color, ...(accentColor === color.id ? styles.colorOptionSelected : {})}} onClick={() => setAccentColor(color.id)}>
@@ -1865,18 +1981,18 @@
                             
                             <button style={{ ...styles.button, ...styles.primaryButton }} onClick={() => fileInputRef.current?.click()}>
                                 <Icon name="upload" size={20} />
-                                Importa CSV
+                                {t('importCSV')}
                             </button>
                             
                             <button style={{ ...styles.button, ...styles.secondaryButton }} onClick={handleExportCSV} disabled={trips.length === 0}>
                                 <Icon name="download" size={20} />
-                                Esporta CSV
+                                {t('exportCSV')}
                             </button>
 
                             {trips.length > 0 && (
-                                <button style={{ ...styles.button, background: 'var(--danger)', color: 'white' }} onClick={() => { if (confirm('Sei sicuro di voler eliminare tutti i dati?')) { setTrips([]); setCurrentDateIndex(0); }}}>
+                                <button style={{ ...styles.button, background: 'var(--danger)', color: 'white' }} onClick={() => { if (confirm(t('deleteConfirm'))) { setTrips([]); setCurrentDateIndex(0); }}}>
                                     <Icon name="trash" size={20} />
-                                    Elimina tutti i dati
+                                    {t('deleteAllData')}
                                 </button>
                             )}
                         </div>
@@ -1901,15 +2017,15 @@
                     <div style={styles.tabBar}>
                         <button style={{...styles.tabButton, ...(currentPage === 'home' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('home')}>
                             <Icon name="home" size={24} />
-                            Viaggio
+                            {t('trip')}
                         </button>
                         <button style={{...styles.tabButton, ...(currentPage === 'costs' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('costs')}>
                             <Icon name="wallet" size={24} />
-                            Costi
+                            {t('costs')}
                         </button>
                         <button style={{...styles.tabButton, ...(currentPage === 'settings' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('settings')}>
                             <Icon name="settings" size={24} />
-                            Impostazioni
+                            {t('settings')}
                         </button>
                     </div>
                 </div>

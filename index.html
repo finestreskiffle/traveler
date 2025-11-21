@@ -578,37 +578,115 @@
             // Translation helper
             const t = (key) => TRANSLATIONS[language][key] || key;
 
-            // Fetch weather data for trips
-            useEffect(() => {
-                const fetchWeather = async () => {
-                    const uniqueLocations = [...new Set(trips.map(trip => trip.Luogo).filter(Boolean))];
-                    if (uniqueLocations.length === 0) return;
+            // Extract coordinates from Google Maps link
+            const extractCoordinatesFromMapsLink = (mapsLink) => {
+                if (!mapsLink) return null;
+                
+                // Try to extract from various Google Maps URL formats
+                // Format: https://www.google.com/maps/@lat,lng,zoom
+                const coordsMatch1 = mapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (coordsMatch1) {
+                    return { latitude: parseFloat(coordsMatch1[1]), longitude: parseFloat(coordsMatch1[2]) };
+                }
+                
+                // Format: https://www.google.com/maps/place/.../@lat,lng
+                const coordsMatch2 = mapsLink.match(/\/place\/[^@]*@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (coordsMatch2) {
+                    return { latitude: parseFloat(coordsMatch2[1]), longitude: parseFloat(coordsMatch2[2]) };
+                }
+                
+                // Format: ?q=lat,lng
+                const coordsMatch3 = mapsLink.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+                if (coordsMatch3) {
+                    return { latitude: parseFloat(coordsMatch3[1]), longitude: parseFloat(coordsMatch3[2]) };
+                }
+                
+                return null;
+            };
 
-                    const weatherResults = {};
-                    for (const location of uniqueLocations) {
-                        try {
-                            // Geocoding to get coordinates
-                            const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=${language}`);
-                            const geoData = await geoResponse.json();
-                            
-                            if (geoData.results && geoData.results.length > 0) {
-                                const { latitude, longitude } = geoData.results[0];
-                                
-                                // Get weather forecast
-                                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`);
-                                const weatherInfo = await weatherResponse.json();
-                                
-                                weatherResults[location] = weatherInfo.daily;
-                            }
-                        } catch (error) {
-                            console.error(`Error fetching weather for ${location}:`, error);
+            // Fetch weather for a specific trip and date
+            const fetchWeatherForTrip = async (trip) => {
+                try {
+                    let coords = null;
+                    
+                    // Try to get coordinates from Maps link first
+                    if (trip.Maps) {
+                        coords = extractCoordinatesFromMapsLink(trip.Maps);
+                    }
+                    
+                    // If no coords from Maps, try geocoding the location
+                    if (!coords && trip.Luogo) {
+                        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.Luogo)}&count=1&language=${language}`);
+                        const geoData = await geoResponse.json();
+                        
+                        if (geoData.results && geoData.results.length > 0) {
+                            coords = {
+                                latitude: geoData.results[0].latitude,
+                                longitude: geoData.results[0].longitude
+                            };
                         }
                     }
+                    
+                    if (!coords) return null;
+                    
+                    // Parse date from trip (format: DD/MM or DD/MM/YYYY)
+                    let targetDate = new Date();
+                    if (trip.Data) {
+                        const dateParts = trip.Data.split('/');
+                        if (dateParts.length >= 2) {
+                            const day = parseInt(dateParts[0]);
+                            const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
+                            const year = dateParts.length === 3 ? parseInt(dateParts[2]) : new Date().getFullYear();
+                            targetDate = new Date(year, month, day);
+                        }
+                    }
+                    
+                    // Get weather forecast
+                    const weatherResponse = await fetch(
+                        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`
+                    );
+                    const weatherData = await weatherResponse.json();
+                    
+                    if (!weatherData.daily) return null;
+                    
+                    // Find the weather for the specific date
+                    const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
+                    const dateIndex = weatherData.daily.time.findIndex(d => d === targetDateStr);
+                    
+                    if (dateIndex === -1) return null;
+                    
+                    return {
+                        date: targetDateStr,
+                        tempMax: weatherData.daily.temperature_2m_max[dateIndex],
+                        tempMin: weatherData.daily.temperature_2m_min[dateIndex],
+                        weathercode: weatherData.daily.weathercode[dateIndex]
+                    };
+                } catch (error) {
+                    console.error('Error fetching weather:', error);
+                    return null;
+                }
+            };
+
+            // Fetch weather data for all trips
+            useEffect(() => {
+                const fetchAllWeather = async () => {
+                    const weatherResults = {};
+                    
+                    for (let i = 0; i < trips.length; i++) {
+                        const trip = trips[i];
+                        if (trip.Luogo || trip.Maps) {
+                            const weather = await fetchWeatherForTrip(trip);
+                            if (weather) {
+                                weatherResults[i] = weather;
+                            }
+                        }
+                    }
+                    
                     setWeatherData(weatherResults);
                 };
 
                 if (trips.length > 0) {
-                    fetchWeather();
+                    fetchAllWeather();
                 }
             }, [trips, language]);
 
@@ -1381,77 +1459,28 @@
                                 {trips.length} {trips.length === 1 ? t('stage') : t('stages')} • {totalDistance.toFixed(1)} {t('totalKm')}
                             </p>
                             {dates.length > 0 && (
-                                <>
-                                    <div style={{ 
-                                        marginTop: '12px', 
-                                        padding: '12px', 
-                                        background: 'var(--accent)', 
-                                        borderRadius: '12px', 
-                                        color: 'white',
-                                        textAlign: 'center'
-                                    }}>
-                                        <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
-                                            {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} ${t('people')}` : ''} • {completedCount}/{currentDayTrips.length} ✓
-                                        </div>
-                                        <div style={{ fontSize: '22px', fontWeight: '700' }}>
-                                            {currency}{dayTotalCost.toFixed(2)}
-                                        </div>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.9 }}>
-                                            {dayMezzoCost > 0 && <span>🚗{currency}{dayMezzoCost.toFixed(0)}</span>}
-                                            {dayPastoCost > 0 && <span>🍽️{currency}{dayPastoCost.toFixed(0)}</span>}
-                                            {dayHotelCost > 0 && <span>🏨{currency}{dayHotelCost.toFixed(0)}</span>}
-                                            {dayAttivitaCost > 0 && <span>🎯{currency}{dayAttivitaCost.toFixed(0)}</span>}
-                                            {dayVariCost > 0 && <span>📦{currency}{dayVariCost.toFixed(0)}</span>}
-                                        </div>
+                                <div style={{ 
+                                    marginTop: '12px', 
+                                    padding: '12px', 
+                                    background: 'var(--accent)', 
+                                    borderRadius: '12px', 
+                                    color: 'white',
+                                    textAlign: 'center'
+                                }}>
+                                    <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '4px' }}>
+                                        {dates[currentDateIndex]}{numPersone > 1 ? ` • ${numPersone} ${t('people')}` : ''} • {completedCount}/{currentDayTrips.length} ✓
                                     </div>
-
-                                    {/* Weather Widget */}
-                                    {currentDayTrips.length > 0 && currentDayTrips[0].Luogo && weatherData[currentDayTrips[0].Luogo] && (
-                                        <div style={{ 
-                                            marginTop: '12px', 
-                                            padding: '12px', 
-                                            background: 'var(--bg-secondary)', 
-                                            borderRadius: '12px',
-                                            border: '1px solid var(--separator)'
-                                        }}>
-                                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                                                ☀️ {t('weather')} - {currentDayTrips[0].Luogo}
-                                            </div>
-                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto' }}>
-                                                {weatherData[currentDayTrips[0].Luogo].time.slice(0, 7).map((date, idx) => {
-                                                    const weatherCode = weatherData[currentDayTrips[0].Luogo].weathercode[idx];
-                                                    const tempMax = weatherData[currentDayTrips[0].Luogo].temperature_2m_max[idx];
-                                                    const tempMin = weatherData[currentDayTrips[0].Luogo].temperature_2m_min[idx];
-                                                    const weatherIcon = weatherCode === 0 ? '☀️' : 
-                                                                       weatherCode <= 3 ? '⛅' : 
-                                                                       weatherCode <= 48 ? '🌫️' : 
-                                                                       weatherCode <= 67 ? '🌧️' : 
-                                                                       weatherCode <= 77 ? '❄️' : '⛈️';
-                                                    return (
-                                                        <div key={idx} style={{ 
-                                                            minWidth: '60px', 
-                                                            textAlign: 'center',
-                                                            padding: '8px',
-                                                            background: 'var(--bg-tertiary)',
-                                                            borderRadius: '8px'
-                                                        }}>
-                                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>
-                                                                {new Date(date).getDate()}/{new Date(date).getMonth() + 1}
-                                                            </div>
-                                                            <div style={{ fontSize: '24px', marginBottom: '4px' }}>{weatherIcon}</div>
-                                                            <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                                                {Math.round(tempMax)}°
-                                                            </div>
-                                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                                                                {Math.round(tempMin)}°
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
+                                    <div style={{ fontSize: '22px', fontWeight: '700' }}>
+                                        {currency}{dayTotalCost.toFixed(2)}
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.9 }}>
+                                        {dayMezzoCost > 0 && <span>🚗{currency}{dayMezzoCost.toFixed(0)}</span>}
+                                        {dayPastoCost > 0 && <span>🍽️{currency}{dayPastoCost.toFixed(0)}</span>}
+                                        {dayHotelCost > 0 && <span>🏨{currency}{dayHotelCost.toFixed(0)}</span>}
+                                        {dayAttivitaCost > 0 && <span>🎯{currency}{dayAttivitaCost.toFixed(0)}</span>}
+                                        {dayVariCost > 0 && <span>📦{currency}{dayVariCost.toFixed(0)}</span>}
+                                    </div>
+                                </div>
                             )}
                         </div>
                         
@@ -1580,6 +1609,38 @@
                                                         <button type="button" style={{ ...styles.actionButton, color: 'var(--danger)' }} onClick={() => handleDeleteTrip(globalIndex)}><Icon name="trash" size={16} /></button>
                                                     </div>
                                                 </div>
+
+                                                {/* Weather for this specific trip */}
+                                                {weatherData[globalIndex] && (
+                                                    <div style={{ 
+                                                        padding: '8px 12px',
+                                                        background: 'var(--bg-tertiary)',
+                                                        borderRadius: '8px',
+                                                        marginBottom: '12px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '12px'
+                                                    }}>
+                                                        <div style={{ fontSize: '32px' }}>
+                                                            {(() => {
+                                                                const code = weatherData[globalIndex].weathercode;
+                                                                return code === 0 ? '☀️' : 
+                                                                       code <= 3 ? '⛅' : 
+                                                                       code <= 48 ? '🌫️' : 
+                                                                       code <= 67 ? '🌧️' : 
+                                                                       code <= 77 ? '❄️' : '⛈️';
+                                                            })()}
+                                                        </div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginBottom: '2px' }}>
+                                                                {t('weather')}
+                                                            </div>
+                                                            <div style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                                {Math.round(weatherData[globalIndex].tempMax)}° / {Math.round(weatherData[globalIndex].tempMin)}°
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 
                                                 <div style={styles.cardRow}>
                                                     <span style={styles.cardLabel}>{t('departureTime')}</span>

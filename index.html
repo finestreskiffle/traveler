@@ -236,6 +236,8 @@
                 distance: 'Distanza (km)',
                 mapsLink: 'Link Google Maps',
                 notes: 'Note',
+                weatherLocation: 'Meteo Luogo',
+                weatherLocationPlaceholder: 'Es. Tokyo, Osaka, Kyoto',
                 position: 'Posizione',
                 map: 'Mappa',
                 navigate: 'Naviga',
@@ -327,6 +329,8 @@
                 distance: 'Distance (km)',
                 mapsLink: 'Google Maps Link',
                 notes: 'Notes',
+                weatherLocation: 'Weather Location',
+                weatherLocationPlaceholder: 'E.g. Tokyo, Osaka, Kyoto',
                 position: 'Position',
                 map: 'Map',
                 navigate: 'Navigate',
@@ -402,7 +406,7 @@
 
         const generateCSV = (trips) => {
             if (trips.length === 0) return '';
-            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza', 'Completata', 'Note'];
+            const headers = ['Data', 'Orario Partenza', 'Orario Arrivo', 'Mezzo', 'Costo Mezzo', 'Costo Pasto', 'Costo Hotel', 'Costo Attività', 'Costi Vari', 'Luogo', 'Descrizione', 'Maps', 'Categoria', 'Distanza', 'Completata', 'Note', 'Meteo Luogo'];
             const lines = [headers.join(';')];
             
             trips.forEach(trip => {
@@ -626,24 +630,59 @@
                         coords = extractCoordinatesFromMapsLink(trip.Maps);
                     }
                     
-                    // Strategy 2: If no coords from Maps (likely a shortened link), use Luogo for geocoding
-                    if (!coords && trip.Luogo) {
-                        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.Luogo)}&count=1&language=${language}`);
-                        const geoData = await geoResponse.json();
+                    // Strategy 2: Use the dedicated "Meteo Luogo" field for geocoding
+                    const weatherLocation = trip['Meteo Luogo'] || trip.Luogo; // Fallback to Luogo if Meteo Luogo is empty
+                    
+                    if (!coords && weatherLocation) {
+                        const location = weatherLocation.trim();
                         
-                        if (geoData.results && geoData.results.length > 0) {
-                            coords = {
-                                latitude: geoData.results[0].latitude,
-                                longitude: geoData.results[0].longitude
-                            };
+                        // Try multiple search strategies
+                        const searchStrategies = [
+                            `${location}, Japan`,           // Try with Japan first (most likely)
+                            `${location}, 日本`,             // Try with Japan in Japanese
+                            location,                       // Try original name
+                            `${location}, Giappone`,        // Try with Italy's name for Japan
+                        ];
+                        
+                        for (const searchQuery of searchStrategies) {
+                            try {
+                                const geoResponse = await fetch(
+                                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=5&language=${language}`
+                                );
+                                const geoData = await geoResponse.json();
+                                
+                                if (geoData.results && geoData.results.length > 0) {
+                                    // Prefer results in Japan (country_code: JP)
+                                    let bestResult = geoData.results.find(r => 
+                                        r.country_code === 'JP' || 
+                                        r.country === 'Japan' || 
+                                        r.country === 'Giappone'
+                                    );
+                                    
+                                    // If no Japan result, take first result
+                                    if (!bestResult) {
+                                        bestResult = geoData.results[0];
+                                    }
+                                    
+                                    coords = {
+                                        latitude: bestResult.latitude,
+                                        longitude: bestResult.longitude
+                                    };
+                                    
+                                    console.log(`Weather: Found ${location} → ${bestResult.name}, ${bestResult.country}`);
+                                    break; // Found coords, exit loop
+                                }
+                            } catch (error) {
+                                console.warn(`Geocoding failed for: ${searchQuery}`, error);
+                                continue; // Try next strategy
+                            }
                         }
                     }
                     
-                    // Strategy 3: If still no coords but we have a Maps link, try extracting location name from Maps
-                    // For shortened links like maps.app.goo.gl, we can't get coords easily
-                    // So we rely on the Luogo field
-                    
-                    if (!coords) return null;
+                    if (!coords) {
+                        console.warn(`Weather: No coordinates found for ${weatherLocation}`);
+                        return null;
+                    }
                     
                     // Parse date from trip (format: DD/MM or DD/MM/YYYY)
                     let targetDate = new Date();
@@ -690,8 +729,9 @@
                     
                     for (let i = 0; i < trips.length; i++) {
                         const trip = trips[i];
-                        // Show weather only if there's a Luogo (needed for geocoding shortened links)
-                        if (trip.Luogo && trip.Luogo.trim() !== '') {
+                        // Show weather if there's a "Meteo Luogo" field OR fallback to "Luogo"
+                        const weatherLocation = trip['Meteo Luogo'] || trip.Luogo;
+                        if (weatherLocation && weatherLocation.trim() !== '') {
                             const weather = await fetchWeatherForTrip(trip);
                             if (weather) {
                                 weatherResults[i] = weather;
@@ -1370,7 +1410,8 @@
                     'Categoria': 'altro',
                     'Distanza': '',
                     'Completata': 'false',
-                    'Note': ''
+                    'Note': '',
+                    'Meteo Luogo': ''
                 });
 
                 const handleChange = (field, value) => {
@@ -1445,6 +1486,17 @@
                                 onChange={e => handleChange('Note', e.target.value)} 
                                 placeholder={t('notes')}
                             />
+                            
+                            <label style={styles.inputLabel}>{t('weatherLocation')}</label>
+                            <input 
+                                style={styles.input} 
+                                value={formData['Meteo Luogo']} 
+                                onChange={e => handleChange('Meteo Luogo', e.target.value)} 
+                                placeholder={t('weatherLocationPlaceholder')}
+                            />
+                            <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '4px', marginBottom: '12px' }}>
+                                💡 {language === 'it' ? 'Città per il meteo (es. Tokyo, Osaka). Se vuoto, usa campo Luogo.' : 'City for weather (e.g. Tokyo, Osaka). If empty, uses Place field.'}
+                            </div>
                             
                             <button type="button" style={{ ...styles.button, ...styles.primaryButton, marginTop: '8px' }} onClick={() => onSave(formData)}>
                                 <Icon name="check" size={20} />

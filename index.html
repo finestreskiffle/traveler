@@ -604,17 +604,29 @@
                 return null;
             };
 
+            // Expand shortened Google Maps links to get coordinates
+            const expandGoogleMapsLink = async (shortLink) => {
+                try {
+                    // For maps.app.goo.gl links, we need to follow redirects
+                    // Since we can't directly follow redirects in browser, we'll use geocoding instead
+                    return null;
+                } catch (error) {
+                    console.error('Error expanding link:', error);
+                    return null;
+                }
+            };
+
             // Fetch weather for a specific trip and date
             const fetchWeatherForTrip = async (trip) => {
                 try {
                     let coords = null;
                     
-                    // Try to get coordinates from Maps link first
+                    // Strategy 1: Try to get coordinates from Maps link (if it's a full URL)
                     if (trip.Maps) {
                         coords = extractCoordinatesFromMapsLink(trip.Maps);
                     }
                     
-                    // If no coords from Maps, try geocoding the location
+                    // Strategy 2: If no coords from Maps (likely a shortened link), use Luogo for geocoding
                     if (!coords && trip.Luogo) {
                         const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trip.Luogo)}&count=1&language=${language}`);
                         const geoData = await geoResponse.json();
@@ -626,6 +638,10 @@
                             };
                         }
                     }
+                    
+                    // Strategy 3: If still no coords but we have a Maps link, try extracting location name from Maps
+                    // For shortened links like maps.app.goo.gl, we can't get coords easily
+                    // So we rely on the Luogo field
                     
                     if (!coords) return null;
                     
@@ -674,7 +690,8 @@
                     
                     for (let i = 0; i < trips.length; i++) {
                         const trip = trips[i];
-                        if (trip.Luogo || trip.Maps) {
+                        // Show weather only if there's a Luogo (needed for geocoding shortened links)
+                        if (trip.Luogo && trip.Luogo.trim() !== '') {
                             const weather = await fetchWeatherForTrip(trip);
                             if (weather) {
                                 weatherResults[i] = weather;
@@ -1929,9 +1946,33 @@
             const SettingsPage = () => {
                 const [localTitle, setLocalTitle] = useState(tripTitle);
                 const [localNumPersone, setLocalNumPersone] = useState(numPersone.toString());
+                const [localBudget, setLocalBudget] = useState(budget.toString());
+                
+                // Sync local states when parent states change
+                useEffect(() => {
+                    setLocalTitle(tripTitle);
+                }, [tripTitle]);
+                
+                useEffect(() => {
+                    setLocalNumPersone(numPersone.toString());
+                }, [numPersone]);
+                
+                useEffect(() => {
+                    setLocalBudget(budget.toString());
+                }, [budget]);
                 
                 const handleTitleBlur = () => {
                     setTripTitle(localTitle);
+                };
+
+                const handleBudgetChange = (e) => {
+                    setLocalBudget(e.target.value);
+                };
+
+                const handleBudgetBlur = () => {
+                    const num = parseFloat(localBudget) || 0;
+                    setBudget(num);
+                    setLocalBudget(num.toString());
                 };
 
                 const handleNumPersoneBlur = () => {
@@ -1965,7 +2006,14 @@
                             />
 
                             <label style={styles.inputLabel}>{t('totalBudget')} ({currency})</label>
-                            <input style={styles.input} type="number" value={budget || ''} onChange={e => setBudget(parseFloat(e.target.value) || 0)} placeholder="0" />
+                            <input 
+                                style={styles.input} 
+                                type="number" 
+                                value={localBudget} 
+                                onChange={handleBudgetChange} 
+                                onBlur={handleBudgetBlur}
+                                placeholder="0" 
+                            />
 
                             <label style={styles.inputLabel}>{t('currency')}</label>
                             <select style={{ ...styles.input, cursor: 'pointer' }} value={currency} onChange={e => setCurrency(e.target.value)}>

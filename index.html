@@ -582,11 +582,16 @@
             // Translation helper
             const t = (key) => TRANSLATIONS[language][key] || key;
 
+            // Weather loading state
+            const [weatherLoading, setWeatherLoading] = useState(false);
+            
+            // Coordinates cache (persists across renders)
+            const coordsCacheRef = useRef({});
+
             // Extract coordinates from Google Maps link
             const extractCoordinatesFromMapsLink = (mapsLink) => {
                 if (!mapsLink) return null;
                 
-                // Try to extract from various Google Maps URL formats
                 // Format: https://www.google.com/maps/@lat,lng,zoom
                 const coordsMatch1 = mapsLink.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
                 if (coordsMatch1) {
@@ -608,143 +613,207 @@
                 return null;
             };
 
-            // Expand shortened Google Maps links to get coordinates
-            const expandGoogleMapsLink = async (shortLink) => {
+            // Fetch with timeout helper
+            const fetchWithTimeout = async (url, timeout = 5000) => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
                 try {
-                    // For maps.app.goo.gl links, we need to follow redirects
-                    // Since we can't directly follow redirects in browser, we'll use geocoding instead
-                    return null;
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    return response;
                 } catch (error) {
-                    console.error('Error expanding link:', error);
-                    return null;
+                    clearTimeout(timeoutId);
+                    throw error;
                 }
             };
 
-            // Fetch weather for a specific trip and date
-            const fetchWeatherForTrip = async (trip) => {
+            // Get coordinates for a location (with caching)
+            const getCoordinatesForLocation = async (locationName) => {
+                if (!locationName) return null;
+                
+                const cacheKey = locationName.toLowerCase().trim();
+                
+                // Check cache first
+                if (coordsCacheRef.current[cacheKey]) {
+                    return coordsCacheRef.current[cacheKey];
+                }
+                
                 try {
-                    let coords = null;
-                    
-                    // Strategy 1: Try to get coordinates from Maps link (if it's a full URL)
-                    if (trip.Maps) {
-                        coords = extractCoordinatesFromMapsLink(trip.Maps);
-                    }
-                    
-                    // Strategy 2: Use the dedicated "Meteo Luogo" field for geocoding
-                    const weatherLocation = trip['Meteo Luogo'] || trip.Luogo; // Fallback to Luogo if Meteo Luogo is empty
-                    
-                    if (!coords && weatherLocation) {
-                        const location = weatherLocation.trim();
-                        
-                        // Try multiple search strategies
-                        const searchStrategies = [
-                            `${location}, Japan`,           // Try with Japan first (most likely)
-                            `${location}, 日本`,             // Try with Japan in Japanese
-                            location,                       // Try original name
-                            `${location}, Giappone`,        // Try with Italy's name for Japan
-                        ];
-                        
-                        for (const searchQuery of searchStrategies) {
-                            try {
-                                const geoResponse = await fetch(
-                                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=5&language=${language}`
-                                );
-                                const geoData = await geoResponse.json();
-                                
-                                if (geoData.results && geoData.results.length > 0) {
-                                    // Prefer results in Japan (country_code: JP)
-                                    let bestResult = geoData.results.find(r => 
-                                        r.country_code === 'JP' || 
-                                        r.country === 'Japan' || 
-                                        r.country === 'Giappone'
-                                    );
-                                    
-                                    // If no Japan result, take first result
-                                    if (!bestResult) {
-                                        bestResult = geoData.results[0];
-                                    }
-                                    
-                                    coords = {
-                                        latitude: bestResult.latitude,
-                                        longitude: bestResult.longitude
-                                    };
-                                    
-                                    console.log(`Weather: Found ${location} → ${bestResult.name}, ${bestResult.country}`);
-                                    break; // Found coords, exit loop
-                                }
-                            } catch (error) {
-                                console.warn(`Geocoding failed for: ${searchQuery}`, error);
-                                continue; // Try next strategy
-                            }
-                        }
-                    }
-                    
-                    if (!coords) {
-                        console.warn(`Weather: No coordinates found for ${weatherLocation}`);
-                        return null;
-                    }
-                    
-                    // Parse date from trip (format: DD/MM or DD/MM/YYYY)
-                    let targetDate = new Date();
-                    if (trip.Data) {
-                        const dateParts = trip.Data.split('/');
-                        if (dateParts.length >= 2) {
-                            const day = parseInt(dateParts[0]);
-                            const month = parseInt(dateParts[1]) - 1; // JS months are 0-indexed
-                            const year = dateParts.length === 3 ? parseInt(dateParts[2]) : new Date().getFullYear();
-                            targetDate = new Date(year, month, day);
-                        }
-                    }
-                    
-                    // Get weather forecast
-                    const weatherResponse = await fetch(
-                        `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`
+                    const geoResponse = await fetchWithTimeout(
+                        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(locationName)}&count=1&language=${language}`,
+                        5000
                     );
-                    const weatherData = await weatherResponse.json();
+                    const geoData = await geoResponse.json();
                     
-                    if (!weatherData.daily) return null;
-                    
-                    // Find the weather for the specific date
-                    const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
-                    const dateIndex = weatherData.daily.time.findIndex(d => d === targetDateStr);
-                    
-                    if (dateIndex === -1) return null;
-                    
-                    return {
-                        date: targetDateStr,
-                        tempMax: weatherData.daily.temperature_2m_max[dateIndex],
-                        tempMin: weatherData.daily.temperature_2m_min[dateIndex],
-                        weathercode: weatherData.daily.weathercode[dateIndex]
-                    };
+                    if (geoData.results && geoData.results.length > 0) {
+                        const result = geoData.results[0];
+                        const coords = {
+                            latitude: result.latitude,
+                            longitude: result.longitude,
+                            name: result.name,
+                            country: result.country
+                        };
+                        
+                        // Cache the result
+                        coordsCacheRef.current[cacheKey] = coords;
+                        console.log(`📍 Geocoded: ${locationName} → ${result.name}, ${result.country}`);
+                        return coords;
+                    }
                 } catch (error) {
-                    console.error('Error fetching weather:', error);
-                    return null;
+                    if (error.name !== 'AbortError') {
+                        console.warn(`Geocoding failed for: ${locationName}`, error);
+                    }
                 }
+                
+                // Cache null result to avoid retrying
+                coordsCacheRef.current[cacheKey] = null;
+                return null;
             };
 
-            // Fetch weather data for all trips
+            // Parse date from trip format (DD/MM or DD/MM/YYYY)
+            const parseTripDate = (dateStr) => {
+                if (!dateStr) return null;
+                const dateParts = dateStr.split('/');
+                if (dateParts.length >= 2) {
+                    const day = parseInt(dateParts[0]);
+                    const month = parseInt(dateParts[1]) - 1;
+                    const year = dateParts.length === 3 ? parseInt(dateParts[2]) : new Date().getFullYear();
+                    return new Date(year, month, day);
+                }
+                return null;
+            };
+
+            // Fetch weather data for all trips (OPTIMIZED)
             useEffect(() => {
                 const fetchAllWeather = async () => {
+                    if (trips.length === 0) return;
+                    
+                    setWeatherLoading(true);
                     const weatherResults = {};
+                    
+                    // Step 1: Group trips by unique location+date combinations
+                    const uniqueCombinations = new Map(); // key: "location|date" -> { coords, date, tripIndices }
                     
                     for (let i = 0; i < trips.length; i++) {
                         const trip = trips[i];
-                        // Show weather if there's a "Meteo Luogo" field OR fallback to "Luogo"
-                        const weatherLocation = trip['Meteo Luogo'] || trip.Luogo;
-                        if (weatherLocation && weatherLocation.trim() !== '') {
-                            const weather = await fetchWeatherForTrip(trip);
-                            if (weather) {
-                                weatherResults[i] = weather;
-                            }
+                        const weatherLocation = (trip['Meteo Luogo'] || '').trim();
+                        
+                        // Skip if no weather location specified
+                        if (!weatherLocation) continue;
+                        
+                        const tripDate = parseTripDate(trip.Data);
+                        if (!tripDate) continue;
+                        
+                        const dateStr = tripDate.toISOString().split('T')[0];
+                        const key = `${weatherLocation.toLowerCase()}|${dateStr}`;
+                        
+                        if (!uniqueCombinations.has(key)) {
+                            uniqueCombinations.set(key, {
+                                location: weatherLocation,
+                                date: tripDate,
+                                dateStr: dateStr,
+                                tripIndices: [],
+                                mapsLink: trip.Maps // Keep maps link for coordinate extraction
+                            });
+                        }
+                        uniqueCombinations.get(key).tripIndices.push(i);
+                        
+                        // Update maps link if this trip has one with coordinates
+                        if (trip.Maps && extractCoordinatesFromMapsLink(trip.Maps)) {
+                            uniqueCombinations.get(key).mapsLink = trip.Maps;
                         }
                     }
                     
+                    console.log(`🌤️ Weather: ${uniqueCombinations.size} unique location/date combinations for ${trips.length} trips`);
+                    
+                    // Step 2: Get coordinates for each unique location (parallel, max 5 at a time)
+                    const combinations = Array.from(uniqueCombinations.values());
+                    const BATCH_SIZE = 5;
+                    
+                    for (let i = 0; i < combinations.length; i += BATCH_SIZE) {
+                        const batch = combinations.slice(i, i + BATCH_SIZE);
+                        
+                        await Promise.all(batch.map(async (combo) => {
+                            // Try to get coords from Maps link first
+                            let coords = combo.mapsLink ? extractCoordinatesFromMapsLink(combo.mapsLink) : null;
+                            
+                            // Fall back to geocoding
+                            if (!coords) {
+                                coords = await getCoordinatesForLocation(combo.location);
+                            }
+                            
+                            combo.coords = coords;
+                        }));
+                    }
+                    
+                    // Step 3: Group by coordinates to minimize weather API calls
+                    const coordsToWeather = new Map(); // key: "lat,lng" -> weather data array
+                    
+                    for (const combo of combinations) {
+                        if (!combo.coords) continue;
+                        
+                        const coordKey = `${combo.coords.latitude.toFixed(2)},${combo.coords.longitude.toFixed(2)}`;
+                        
+                        if (!coordsToWeather.has(coordKey)) {
+                            coordsToWeather.set(coordKey, {
+                                coords: combo.coords,
+                                combinations: []
+                            });
+                        }
+                        coordsToWeather.get(coordKey).combinations.push(combo);
+                    }
+                    
+                    console.log(`🌤️ Weather: ${coordsToWeather.size} unique coordinates to fetch`);
+                    
+                    // Step 4: Fetch weather for each unique coordinate (parallel, max 5 at a time)
+                    const coordGroups = Array.from(coordsToWeather.values());
+                    
+                    for (let i = 0; i < coordGroups.length; i += BATCH_SIZE) {
+                        const batch = coordGroups.slice(i, i + BATCH_SIZE);
+                        
+                        await Promise.all(batch.map(async (group) => {
+                            try {
+                                const weatherResponse = await fetchWithTimeout(
+                                    `https://api.open-meteo.com/v1/forecast?latitude=${group.coords.latitude}&longitude=${group.coords.longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`,
+                                    8000
+                                );
+                                const data = await weatherResponse.json();
+                                
+                                if (!data.daily) return;
+                                
+                                // Assign weather to each combination using these coords
+                                for (const combo of group.combinations) {
+                                    const dateIndex = data.daily.time.findIndex(d => d === combo.dateStr);
+                                    
+                                    if (dateIndex !== -1) {
+                                        const weatherInfo = {
+                                            date: combo.dateStr,
+                                            tempMax: data.daily.temperature_2m_max[dateIndex],
+                                            tempMin: data.daily.temperature_2m_min[dateIndex],
+                                            weathercode: data.daily.weathercode[dateIndex],
+                                            locationName: group.coords.name || combo.location
+                                        };
+                                        
+                                        // Assign to all trips with this combination
+                                        for (const tripIndex of combo.tripIndices) {
+                                            weatherResults[tripIndex] = weatherInfo;
+                                        }
+                                    }
+                                }
+                            } catch (error) {
+                                if (error.name !== 'AbortError') {
+                                    console.warn(`Weather fetch failed for coords ${group.coords.latitude},${group.coords.longitude}`, error);
+                                }
+                            }
+                        }));
+                    }
+                    
+                    console.log(`✅ Weather loaded for ${Object.keys(weatherResults).length} trips`);
                     setWeatherData(weatherResults);
+                    setWeatherLoading(false);
                 };
 
-                if (trips.length > 0) {
-                    fetchAllWeather();
-                }
+                fetchAllWeather();
             }, [trips, language]);
 
             const groupedTrips = groupByDate(trips);
@@ -1615,6 +1684,7 @@
                                             <span style={styles.dateText}>{dates[currentDateIndex]}</span>
                                             <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
                                                 {t('day')} {currentDateIndex + 1} {t('of')} {dates.length}
+                                                {weatherLoading && <span style={{ marginLeft: '8px' }}>🌤️ ...</span>}
                                             </div>
                                         </div>
                                         <button type="button" style={{...styles.dateNavButton, ...(currentDateIndex === dates.length - 1 ? styles.dateNavButtonDisabled : {})}} onClick={() => setCurrentDateIndex(Math.min(dates.length - 1, currentDateIndex + 1))} disabled={currentDateIndex === dates.length - 1}>

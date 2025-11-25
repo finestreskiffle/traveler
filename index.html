@@ -10,6 +10,9 @@
     <title>Travel Manager</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- Leaflet CSS & JS per mappa interattiva -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -194,6 +197,9 @@
             { id: 'teal', name: 'Azzurro', color: '#5AC8FA' },
         ];
 
+        // App Version
+        const APP_VERSION = "3.0.0";
+
         // Translations
         const TRANSLATIONS = {
             it: {
@@ -287,7 +293,19 @@
                 // Weather
                 loading: 'Caricamento...',
                 noWeatherData: 'Nessun dato meteo disponibile',
-                addLocationForWeather: 'Aggiungi luoghi alle tappe per vedere il meteo'
+                addLocationForWeather: 'Aggiungi luoghi alle tappe per vedere il meteo',
+                // Map
+                mapTab: 'Mappa',
+                mapTitle: 'Mappa Viaggio',
+                noMapData: 'Nessun dato da visualizzare',
+                addStagesForMap: 'Aggiungi tappe con coordinate per vedere la mappa',
+                allDays: 'Tutti i giorni',
+                // Timeline
+                timelineView: 'Timeline',
+                cardView: 'Card',
+                // Version
+                version: 'Versione',
+                madeWith: 'Fatto con ❤️ per i viaggiatori'
             },
             en: {
                 // Common
@@ -380,7 +398,19 @@
                 // Weather
                 loading: 'Loading...',
                 noWeatherData: 'No weather data available',
-                addLocationForWeather: 'Add locations to stops to see weather'
+                addLocationForWeather: 'Add locations to stops to see weather',
+                // Map
+                mapTab: 'Map',
+                mapTitle: 'Trip Map',
+                noMapData: 'No data to display',
+                addStagesForMap: 'Add stops with coordinates to see the map',
+                allDays: 'All days',
+                // Timeline
+                timelineView: 'Timeline',
+                cardView: 'Card',
+                // Version
+                version: 'Version',
+                madeWith: 'Made with ❤️ for travelers'
             }
         };
 
@@ -468,6 +498,10 @@
                 pieChart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
                 search: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
                 grip: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>,
+                mapPin: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+                list: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+                clock: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+                globe: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
             };
             return icons[name] || null;
         };
@@ -496,6 +530,7 @@
             const [language, setLanguage] = useState('it');
             const [weatherData, setWeatherData] = useState({});
             const [swipingCard, setSwipingCard] = useState(null);
+            const [viewMode, setViewMode] = useState('cards'); // 'cards' o 'timeline'
             const fileInputRef = useRef(null);
 
             const currencies = [
@@ -1665,6 +1700,60 @@
                                             </button>
                                         ))}
                                     </div>
+
+                                    {/* View Mode Toggle */}
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        background: 'var(--bg-secondary)', 
+                                        borderRadius: '10px', 
+                                        padding: '4px',
+                                        marginBottom: '16px'
+                                    }}>
+                                        <button
+                                            type="button"
+                                            style={{
+                                                flex: 1,
+                                                padding: '8px 16px',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                background: viewMode === 'cards' ? 'var(--accent)' : 'transparent',
+                                                color: viewMode === 'cards' ? 'white' : 'var(--text-secondary)',
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px'
+                                            }}
+                                            onClick={() => setViewMode('cards')}
+                                        >
+                                            <Icon name="list" size={16} />
+                                            {t('cardView')}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            style={{
+                                                flex: 1,
+                                                padding: '8px 16px',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                background: viewMode === 'timeline' ? 'var(--accent)' : 'transparent',
+                                                color: viewMode === 'timeline' ? 'white' : 'var(--text-secondary)',
+                                                fontSize: '13px',
+                                                fontWeight: '600',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px'
+                                            }}
+                                            onClick={() => setViewMode('timeline')}
+                                        >
+                                            <Icon name="clock" size={16} />
+                                            {t('timelineView')}
+                                        </button>
+                                    </div>
                                 </>
                             )}
 
@@ -1692,7 +1781,7 @@
                                         </button>
                                     </div>
 
-                                    {/* Swipe zone for cards */}
+                                    {/* Swipe zone for cards/timeline */}
                                     <div 
                                         style={styles.swipeZone}
                                         onTouchStart={handleSwipeStart}
@@ -1704,7 +1793,185 @@
                                             <p>{t('noResults')}</p>
                                             <p style={{ fontSize: '13px', marginTop: '4px' }}>{t('noResultsSubtext')}</p>
                                         </div>
+                                    ) : viewMode === 'timeline' ? (
+                                        /* Timeline View */
+                                        <div style={{ position: 'relative', paddingLeft: '24px' }}>
+                                            {/* Timeline line */}
+                                            <div style={{
+                                                position: 'absolute',
+                                                left: '8px',
+                                                top: '8px',
+                                                bottom: '8px',
+                                                width: '2px',
+                                                background: 'var(--separator)',
+                                                borderRadius: '1px'
+                                            }} />
+                                            
+                                            {filteredDayTrips.map((trip, localIndex) => {
+                                                const originalIndex = currentDayTrips.indexOf(trip);
+                                                const globalIndex = getTripIndex(dates[currentDateIndex], originalIndex);
+                                                const isCompleted = trip['Completata'] === 'true';
+                                                const categoryColor = getCategoryColor(trip['Categoria']);
+                                                const tripCost = getTripTotalCost(trip);
+                                                
+                                                return (
+                                                    <div key={localIndex} style={{ 
+                                                        position: 'relative',
+                                                        paddingBottom: '20px',
+                                                        opacity: isCompleted ? 0.6 : 1
+                                                    }}>
+                                                        {/* Timeline dot */}
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            left: '-20px',
+                                                            top: '4px',
+                                                            width: '16px',
+                                                            height: '16px',
+                                                            borderRadius: '50%',
+                                                            background: isCompleted ? 'var(--success)' : categoryColor,
+                                                            border: '3px solid var(--bg-primary)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            zIndex: 1
+                                                        }}
+                                                        onClick={() => handleToggleComplete(globalIndex)}
+                                                        >
+                                                            {isCompleted && <Icon name="check" size={8} />}
+                                                        </div>
+                                                        
+                                                        {/* Time label */}
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            left: '-60px',
+                                                            top: '2px',
+                                                            fontSize: '11px',
+                                                            fontWeight: '600',
+                                                            color: 'var(--text-tertiary)',
+                                                            width: '35px',
+                                                            textAlign: 'right'
+                                                        }}>
+                                                            {formatTime(trip['Orario Partenza'])}
+                                                        </div>
+                                                        
+                                                        {/* Content */}
+                                                        <div 
+                                                            style={{
+                                                                background: 'var(--bg-secondary)',
+                                                                borderRadius: '12px',
+                                                                padding: '12px',
+                                                                marginLeft: '8px',
+                                                                borderLeft: `3px solid ${categoryColor}`,
+                                                                cursor: 'pointer'
+                                                            }}
+                                                            onClick={() => setEditingTrip({ data: trip, index: globalIndex })}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ 
+                                                                        fontSize: '15px', 
+                                                                        fontWeight: '600',
+                                                                        color: 'var(--text-primary)',
+                                                                        textDecoration: isCompleted ? 'line-through' : 'none',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        gap: '6px'
+                                                                    }}>
+                                                                        <span style={{ fontSize: '16px' }}>{getTransportIcon(trip.Mezzo)}</span>
+                                                                        {trip.Luogo || 'Senza nome'}
+                                                                    </div>
+                                                                    {trip.Descrizione && (
+                                                                        <div style={{ 
+                                                                            fontSize: '13px', 
+                                                                            color: 'var(--text-secondary)',
+                                                                            marginTop: '4px'
+                                                                        }}>
+                                                                            {trip.Descrizione}
+                                                                        </div>
+                                                                    )}
+                                                                    <div style={{ 
+                                                                        display: 'flex', 
+                                                                        gap: '12px', 
+                                                                        marginTop: '8px',
+                                                                        fontSize: '12px',
+                                                                        color: 'var(--text-tertiary)'
+                                                                    }}>
+                                                                        {trip['Orario Arrivo'] && trip['Orario Arrivo'] !== '-' && (
+                                                                            <span>→ {formatTime(trip['Orario Arrivo'])}</span>
+                                                                        )}
+                                                                        {trip.Mezzo && (
+                                                                            <span>{trip.Mezzo}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ textAlign: 'right' }}>
+                                                                    {tripCost > 0 && (
+                                                                        <div style={{ 
+                                                                            fontSize: '14px', 
+                                                                            fontWeight: '700',
+                                                                            color: 'var(--accent)'
+                                                                        }}>
+                                                                            {currency}{tripCost.toFixed(0)}
+                                                                        </div>
+                                                                    )}
+                                                                    {weatherData[globalIndex] && (
+                                                                        <div style={{ 
+                                                                            fontSize: '13px',
+                                                                            marginTop: '4px'
+                                                                        }}>
+                                                                            {(() => {
+                                                                                const code = weatherData[globalIndex].weathercode;
+                                                                                return code === 0 ? '☀️' : 
+                                                                                       code <= 3 ? '⛅' : 
+                                                                                       code <= 48 ? '🌫️' : 
+                                                                                       code <= 67 ? '🌧️' : 
+                                                                                       code <= 77 ? '❄️' : '⛈️';
+                                                                            })()}
+                                                                            {Math.round(weatherData[globalIndex].tempMax)}°
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Quick actions */}
+                                                            {trip.Maps && (
+                                                                <div style={{ 
+                                                                    display: 'flex', 
+                                                                    gap: '16px', 
+                                                                    marginTop: '8px',
+                                                                    paddingTop: '8px',
+                                                                    borderTop: '1px solid var(--separator)'
+                                                                }}>
+                                                                    <a 
+                                                                        href={trip.Maps} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer" 
+                                                                        style={styles.mapLink}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                    >
+                                                                        <Icon name="map" size={14} />
+                                                                        {t('map')}
+                                                                    </a>
+                                                                    <a 
+                                                                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(trip.Luogo)}&travelmode=transit`} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer" 
+                                                                        style={{ ...styles.mapLink, color: 'var(--success)' }}
+                                                                        onClick={e => e.stopPropagation()}
+                                                                    >
+                                                                        <Icon name="navigation" size={14} />
+                                                                        {t('navigate')}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     ) : (
+                                        /* Card View */
                                     filteredDayTrips.map((trip, localIndex) => {
                                         const originalIndex = currentDayTrips.indexOf(trip);
                                         const globalIndex = getTripIndex(dates[currentDateIndex], originalIndex);
@@ -2226,6 +2493,266 @@
                                     {t('deleteAllData')}
                                 </button>
                             )}
+
+                            {/* Versione App */}
+                            <div style={{ 
+                                marginTop: '40px', 
+                                paddingTop: '20px', 
+                                borderTop: '1px solid var(--separator)',
+                                textAlign: 'center'
+                            }}>
+                                <div style={{ 
+                                    fontSize: '13px', 
+                                    color: 'var(--text-tertiary)',
+                                    marginBottom: '4px'
+                                }}>
+                                    {t('version')} {APP_VERSION}
+                                </div>
+                                <div style={{ 
+                                    fontSize: '12px', 
+                                    color: 'var(--text-tertiary)',
+                                    opacity: 0.7
+                                }}>
+                                    {t('madeWith')}
+                                </div>
+                            </div>
+                        </div>
+                    </>
+                );
+            };
+
+            // Map Page Component
+            const MapPage = () => {
+                const mapRef = useRef(null);
+                const mapInstanceRef = useRef(null);
+                const markersRef = useRef([]);
+                const [selectedDay, setSelectedDay] = useState('all');
+
+                // Get unique dates
+                const dates = [...new Set(trips.map(t => t.Data))].sort((a, b) => {
+                    const [dayA, monthA] = a.split('/').map(Number);
+                    const [dayB, monthB] = b.split('/').map(Number);
+                    if (monthA !== monthB) return monthA - monthB;
+                    return dayA - dayB;
+                });
+
+                // Filter trips by selected day
+                const filteredTrips = selectedDay === 'all' 
+                    ? trips 
+                    : trips.filter(t => t.Data === selectedDay);
+
+                // Get coordinates from trips (using Meteo Luogo for geocoding)
+                const [markers, setMarkers] = useState([]);
+
+                useEffect(() => {
+                    const geocodeLocations = async () => {
+                        const uniqueLocations = [...new Set(filteredTrips.map(t => t['Meteo Luogo'] || t.Luogo).filter(Boolean))];
+                        const newMarkers = [];
+
+                        for (const location of uniqueLocations) {
+                            try {
+                                const response = await fetch(
+                                    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=${language}`
+                                );
+                                const data = await response.json();
+                                if (data.results && data.results.length > 0) {
+                                    const { latitude, longitude, name } = data.results[0];
+                                    // Find all trips for this location
+                                    const locationTrips = filteredTrips.filter(t => 
+                                        (t['Meteo Luogo'] || t.Luogo) === location
+                                    );
+                                    newMarkers.push({
+                                        lat: latitude,
+                                        lng: longitude,
+                                        name: name,
+                                        trips: locationTrips
+                                    });
+                                }
+                            } catch (e) {
+                                console.log('Geocoding error for:', location);
+                            }
+                        }
+                        setMarkers(newMarkers);
+                    };
+
+                    if (filteredTrips.length > 0) {
+                        geocodeLocations();
+                    }
+                }, [filteredTrips, language]);
+
+                // Initialize map
+                useEffect(() => {
+                    if (!mapRef.current || mapInstanceRef.current) return;
+
+                    // Default center: Japan
+                    mapInstanceRef.current = L.map(mapRef.current).setView([35.6762, 139.6503], 5);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors'
+                    }).addTo(mapInstanceRef.current);
+
+                    return () => {
+                        if (mapInstanceRef.current) {
+                            mapInstanceRef.current.remove();
+                            mapInstanceRef.current = null;
+                        }
+                    };
+                }, []);
+
+                // Update markers
+                useEffect(() => {
+                    if (!mapInstanceRef.current) return;
+
+                    // Clear existing markers
+                    markersRef.current.forEach(m => m.remove());
+                    markersRef.current = [];
+
+                    if (markers.length === 0) return;
+
+                    // Category colors
+                    const categoryColors = {
+                        'trasporti': '#007AFF',
+                        'alloggio': '#5856D6',
+                        'cibo': '#FF9500',
+                        'shopping': '#FF2D55',
+                        'attivita': '#34C759',
+                        'altro': '#8E8E93'
+                    };
+
+                    // Add markers
+                    const bounds = [];
+                    markers.forEach(marker => {
+                        const mainCategory = marker.trips[0]?.Categoria || 'altro';
+                        const color = categoryColors[mainCategory] || categoryColors.altro;
+
+                        const icon = L.divIcon({
+                            className: 'custom-marker',
+                            html: `<div style="
+                                background: ${color};
+                                width: 32px;
+                                height: 32px;
+                                border-radius: 50% 50% 50% 0;
+                                transform: rotate(-45deg);
+                                border: 3px solid white;
+                                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            "><span style="transform: rotate(45deg); color: white; font-weight: bold; font-size: 12px;">${marker.trips.length}</span></div>`,
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32],
+                            popupAnchor: [0, -32]
+                        });
+
+                        const popupContent = `
+                            <div style="max-width: 200px;">
+                                <strong style="font-size: 14px;">${marker.name}</strong>
+                                <div style="font-size: 12px; color: #666; margin-top: 4px;">
+                                    ${marker.trips.length} ${marker.trips.length === 1 ? t('stage') : t('stages')}
+                                </div>
+                                <ul style="margin: 8px 0 0 0; padding-left: 16px; font-size: 12px;">
+                                    ${marker.trips.slice(0, 5).map(trip => `<li>${trip.Luogo || trip.Descrizione}</li>`).join('')}
+                                    ${marker.trips.length > 5 ? `<li>... +${marker.trips.length - 5}</li>` : ''}
+                                </ul>
+                            </div>
+                        `;
+
+                        const m = L.marker([marker.lat, marker.lng], { icon })
+                            .addTo(mapInstanceRef.current)
+                            .bindPopup(popupContent);
+
+                        markersRef.current.push(m);
+                        bounds.push([marker.lat, marker.lng]);
+                    });
+
+                    // Fit bounds
+                    if (bounds.length > 0) {
+                        if (bounds.length === 1) {
+                            mapInstanceRef.current.setView(bounds[0], 12);
+                        } else {
+                            mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                    }
+                }, [markers]);
+
+                return (
+                    <>
+                        <div style={styles.header}>
+                            <h1 style={styles.headerTitle}>{t('mapTitle')}</h1>
+                            <p style={{ ...styles.headerSubtitle, marginTop: '4px' }}>
+                                {markers.length} {language === 'it' ? 'località' : 'locations'}
+                            </p>
+                        </div>
+
+                        <div style={{ ...styles.content, padding: '0', paddingBottom: '100px' }}>
+                            {/* Day filter */}
+                            <div style={{ padding: '12px 20px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--separator)' }}>
+                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                                    <button
+                                        style={{
+                                            ...styles.filterChip,
+                                            ...(selectedDay === 'all' ? styles.filterChipActive : {})
+                                        }}
+                                        onClick={() => setSelectedDay('all')}
+                                    >
+                                        {t('allDays')}
+                                    </button>
+                                    {dates.map(date => (
+                                        <button
+                                            key={date}
+                                            style={{
+                                                ...styles.filterChip,
+                                                ...(selectedDay === date ? styles.filterChipActive : {})
+                                            }}
+                                            onClick={() => setSelectedDay(date)}
+                                        >
+                                            {date}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Map container */}
+                            {trips.length === 0 ? (
+                                <div style={styles.noResults}>
+                                    <Icon name="mapPin" size={48} />
+                                    <h3 style={{ margin: '16px 0 8px' }}>{t('noMapData')}</h3>
+                                    <p>{t('addStagesForMap')}</p>
+                                </div>
+                            ) : (
+                                <div 
+                                    ref={mapRef} 
+                                    style={{ 
+                                        width: '100%', 
+                                        height: 'calc(100vh - 200px)',
+                                        minHeight: '400px'
+                                    }} 
+                                />
+                            )}
+
+                            {/* Legend */}
+                            <div style={{ 
+                                padding: '12px 20px', 
+                                background: 'var(--bg-secondary)',
+                                borderTop: '1px solid var(--separator)',
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '12px',
+                                fontSize: '11px'
+                            }}>
+                                {[
+                                    { cat: 'trasporti', color: '#007AFF', label: '🚌 ' + t('transports') },
+                                    { cat: 'alloggio', color: '#5856D6', label: '🏨 ' + t('hotels') },
+                                    { cat: 'cibo', color: '#FF9500', label: '🍽️ ' + t('meals') },
+                                    { cat: 'shopping', color: '#FF2D55', label: '🛍️ Shopping' },
+                                    { cat: 'attivita', color: '#34C759', label: '🎯 ' + t('activities') },
+                                ].map(item => (
+                                    <div key={item.cat} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: item.color }} />
+                                        <span>{item.label}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </>
                 );
@@ -2235,6 +2762,7 @@
                 <div style={styles.container}>
                     {currentPage === 'home' && <HomePage />}
                     {currentPage === 'costs' && <CostsPage />}
+                    {currentPage === 'map' && <MapPage />}
                     {currentPage === 'settings' && <SettingsPage />}
 
                     {editingTrip && (
@@ -2249,6 +2777,10 @@
                         <button style={{...styles.tabButton, ...(currentPage === 'home' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('home')}>
                             <Icon name="home" size={24} />
                             {t('trip')}
+                        </button>
+                        <button style={{...styles.tabButton, ...(currentPage === 'map' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('map')}>
+                            <Icon name="mapPin" size={24} />
+                            {t('mapTab')}
                         </button>
                         <button style={{...styles.tabButton, ...(currentPage === 'costs' ? styles.tabButtonActive : {})}} onClick={() => setCurrentPage('costs')}>
                             <Icon name="wallet" size={24} />

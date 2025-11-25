@@ -774,7 +774,7 @@
                         await Promise.all(batch.map(async (group) => {
                             try {
                                 const weatherResponse = await fetchWithTimeout(
-                                    `https://api.open-meteo.com/v1/forecast?latitude=${group.coords.latitude}&longitude=${group.coords.longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto`,
+                                    `https://api.open-meteo.com/v1/forecast?latitude=${group.coords.latitude}&longitude=${group.coords.longitude}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&forecast_days=16`,
                                     8000
                                 );
                                 const data = await weatherResponse.json();

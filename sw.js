@@ -1,5 +1,5 @@
-// Travel Manager Service Worker v3.0.2
-const CACHE_VERSION = 'v3.0.2';
+// Travel Manager Service Worker v3.0.3
+const CACHE_VERSION = 'v3.0.3';
 const STATIC_CACHE = `travel-manager-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `travel-manager-dynamic-${CACHE_VERSION}`;
 
@@ -27,7 +27,7 @@ const API_DOMAINS = [
 
 // Install: Cache static assets
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing Service Worker v3.0.2');
+    console.log('[SW] Installing Service Worker v3.0.3');
     event.waitUntil(
         caches.open(STATIC_CACHE)
             .then((cache) => {
@@ -40,7 +40,7 @@ self.addEventListener('install', (event) => {
 
 // Activate: Clean old caches
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating Service Worker v3.0.2');
+    console.log('[SW] Activating Service Worker v3.0.3');
     event.waitUntil(
         caches.keys()
             .then((cacheNames) => {
@@ -150,4 +150,4 @@ self.addEventListener('message', (event) => {
     }
 });
 
-console.log('[SW] Service Worker v3.0.2 loaded');
+console.log('[SW] Service Worker v3.0.3 loaded');

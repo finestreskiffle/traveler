@@ -161,28 +161,6 @@
         /* Leaflet map fixes */
         .leaflet-container {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
-            z-index: 1;
-            touch-action: manipulation;
-        }
-
-        .leaflet-popup-content-wrapper {
-            border-radius: 12px !important;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
-            padding: 0 !important;
-        }
-
-        .leaflet-popup-content {
-            margin: 14px !important;
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
-            line-height: 1.4 !important;
-        }
-
-        .leaflet-popup-close-button {
-            color: #666 !important;
-            font-size: 24px !important;
-            width: 30px !important;
-            height: 30px !important;
-            padding: 4px !important;
         }
 
         .leaflet-control-zoom {
@@ -193,29 +171,12 @@
         }
 
         .leaflet-control-zoom a {
-            width: 40px !important;
-            height: 40px !important;
-            line-height: 40px !important;
-            font-size: 20px !important;
+            width: 44px !important;
+            height: 44px !important;
+            line-height: 44px !important;
+            font-size: 22px !important;
             color: #333 !important;
             background: white !important;
-        }
-
-        .leaflet-control-zoom a:hover {
-            background: #f0f0f0 !important;
-        }
-
-        [data-theme="dark"] .leaflet-popup-content-wrapper {
-            background: #2C2C2E !important;
-            color: #FFFFFF !important;
-        }
-
-        [data-theme="dark"] .leaflet-popup-tip {
-            background: #2C2C2E !important;
-        }
-
-        [data-theme="dark"] .leaflet-popup-close-button {
-            color: #EBEBF5 !important;
         }
 
         [data-theme="dark"] .leaflet-control-zoom a {
@@ -223,11 +184,18 @@
             color: #fff !important;
         }
 
-        /* Marker label (non-interactive) */
-        .marker-label {
+        /* Marker number tooltip */
+        .marker-tooltip {
             background: transparent !important;
             border: none !important;
-            pointer-events: none !important;
+            box-shadow: none !important;
+            color: white !important;
+            font-weight: bold !important;
+            font-size: 13px !important;
+        }
+
+        .marker-tooltip::before {
+            display: none !important;
         }
 
         /* Circle markers are clickable */
@@ -275,7 +243,7 @@
         ];
 
         // App Version
-        const APP_VERSION = "3.0.2";
+        const APP_VERSION = "3.0.3";
 
         // Translations
         const TRANSLATIONS = {
@@ -2600,10 +2568,10 @@
 
             // Map Page Component
             const MapPage = () => {
-                const mapRef = useRef(null);
+                const mapContainerRef = useRef(null);
                 const mapInstanceRef = useRef(null);
-                const markersRef = useRef([]);
                 const [selectedDay, setSelectedDay] = useState('all');
+                const [selectedMarker, setSelectedMarker] = useState(null);
 
                 // Get unique dates
                 const dates = [...new Set(trips.map(t => t.Data))].sort((a, b) => {
@@ -2618,11 +2586,13 @@
                     ? trips 
                     : trips.filter(t => t.Data === selectedDay);
 
-                // Get coordinates from trips (using Meteo Luogo for geocoding)
+                // Get coordinates from trips
                 const [markers, setMarkers] = useState([]);
+                const [isLoading, setIsLoading] = useState(false);
 
                 useEffect(() => {
                     const geocodeLocations = async () => {
+                        setIsLoading(true);
                         const uniqueLocations = [...new Set(filteredTrips.map(t => t['Meteo Luogo'] || t.Luogo).filter(Boolean))];
                         const newMarkers = [];
 
@@ -2634,7 +2604,6 @@
                                 const data = await response.json();
                                 if (data.results && data.results.length > 0) {
                                     const { latitude, longitude, name } = data.results[0];
-                                    // Find all trips for this location
                                     const locationTrips = filteredTrips.filter(t => 
                                         (t['Meteo Luogo'] || t.Luogo) === location
                                     );
@@ -2642,6 +2611,7 @@
                                         lat: latitude,
                                         lng: longitude,
                                         name: name,
+                                        originalName: location,
                                         trips: locationTrips
                                     });
                                 }
@@ -2650,216 +2620,270 @@
                             }
                         }
                         setMarkers(newMarkers);
+                        setIsLoading(false);
                     };
 
                     if (filteredTrips.length > 0) {
                         geocodeLocations();
+                    } else {
+                        setMarkers([]);
                     }
-                }, [filteredTrips, language]);
+                }, [selectedDay, trips.length]);
 
-                // Initialize map
+                // Initialize and update map
                 useEffect(() => {
-                    if (!mapRef.current || mapInstanceRef.current) return;
+                    if (!mapContainerRef.current) return;
+                    
+                    // Clean up old map
+                    if (mapInstanceRef.current) {
+                        mapInstanceRef.current.remove();
+                        mapInstanceRef.current = null;
+                    }
 
-                    // Create map with explicit zoom options
-                    mapInstanceRef.current = L.map(mapRef.current, {
-                        center: [35.6762, 139.6503],
-                        zoom: 5,
-                        zoomControl: true,
-                        scrollWheelZoom: true,
-                        doubleClickZoom: true,
-                        touchZoom: true,
-                        tap: true,
-                        dragging: true
-                    });
+                    // Create new map
+                    const map = L.map(mapContainerRef.current, {
+                        tap: false // Disable tap handler to fix mobile issues
+                    }).setView([35.6762, 139.6503], 6);
 
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '© OSM',
-                        maxZoom: 18,
-                        minZoom: 2
-                    }).addTo(mapInstanceRef.current);
+                        attribution: '© OSM'
+                    }).addTo(map);
 
+                    // Add markers
+                    if (markers.length > 0) {
+                        const categoryColors = {
+                            'trasporti': '#007AFF',
+                            'alloggio': '#5856D6',
+                            'cibo': '#FF9500',
+                            'shopping': '#FF2D55',
+                            'attivita': '#34C759',
+                            'altro': '#8E8E93'
+                        };
+
+                        const bounds = [];
+                        
+                        markers.forEach((marker, idx) => {
+                            const mainCategory = marker.trips[0]?.Categoria || 'altro';
+                            const color = categoryColors[mainCategory] || categoryColors.altro;
+
+                            // Simple circle marker
+                            const circle = L.circleMarker([marker.lat, marker.lng], {
+                                radius: 20,
+                                fillColor: color,
+                                color: '#fff',
+                                weight: 3,
+                                opacity: 1,
+                                fillOpacity: 0.9
+                            }).addTo(map);
+
+                            // Click handler
+                            circle.on('click', () => {
+                                setSelectedMarker(marker);
+                            });
+
+                            // Tooltip with number
+                            circle.bindTooltip(String(marker.trips.length), {
+                                permanent: true,
+                                direction: 'center',
+                                className: 'marker-tooltip'
+                            });
+
+                            bounds.push([marker.lat, marker.lng]);
+                        });
+
+                        // Fit to bounds
+                        if (bounds.length === 1) {
+                            map.setView(bounds[0], 12);
+                        } else if (bounds.length > 1) {
+                            map.fitBounds(bounds, { padding: [30, 30] });
+                        }
+                    }
+
+                    mapInstanceRef.current = map;
+
+                    // Cleanup
                     return () => {
                         if (mapInstanceRef.current) {
                             mapInstanceRef.current.remove();
                             mapInstanceRef.current = null;
                         }
                     };
-                }, []);
-
-                // Update markers
-                useEffect(() => {
-                    if (!mapInstanceRef.current) return;
-
-                    // Clear existing markers
-                    markersRef.current.forEach(m => m.remove());
-                    markersRef.current = [];
-
-                    if (markers.length === 0) return;
-
-                    // Category colors
-                    const categoryColors = {
-                        'trasporti': '#007AFF',
-                        'alloggio': '#5856D6',
-                        'cibo': '#FF9500',
-                        'shopping': '#FF2D55',
-                        'attivita': '#34C759',
-                        'altro': '#8E8E93'
-                    };
-
-                    // Add markers
-                    const bounds = [];
-                    markers.forEach(marker => {
-                        const mainCategory = marker.trips[0]?.Categoria || 'altro';
-                        const color = categoryColors[mainCategory] || categoryColors.altro;
-
-                        const popupContent = `
-                            <div style="min-width: 180px; max-width: 250px;">
-                                <div style="font-size: 16px; font-weight: 700; margin-bottom: 6px; color: #000;">${marker.name}</div>
-                                <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
-                                    📍 ${marker.trips.length} ${marker.trips.length === 1 ? t('stage') : t('stages')}
-                                </div>
-                                <div style="font-size: 13px; color: #333;">
-                                    ${marker.trips.slice(0, 5).map(trip => `<div style="padding: 4px 0; border-bottom: 1px solid #eee;">• ${trip.Luogo || trip.Descrizione}</div>`).join('')}
-                                    ${marker.trips.length > 5 ? `<div style="padding: 4px 0; color: #888;">... e altre ${marker.trips.length - 5} tappe</div>` : ''}
-                                </div>
-                            </div>
-                        `;
-
-                        // Use CircleMarker for better mobile support
-                        const m = L.circleMarker([marker.lat, marker.lng], {
-                            radius: 18,
-                            fillColor: color,
-                            color: '#fff',
-                            weight: 3,
-                            opacity: 1,
-                            fillOpacity: 0.9
-                        }).addTo(mapInstanceRef.current);
-
-                        // Add number label
-                        const label = L.divIcon({
-                            className: 'marker-label',
-                            html: `<div style="
-                                color: white;
-                                font-weight: bold;
-                                font-size: 12px;
-                                text-align: center;
-                                line-height: 36px;
-                                pointer-events: none;
-                            ">${marker.trips.length}</div>`,
-                            iconSize: [36, 36],
-                            iconAnchor: [18, 18]
-                        });
-                        const labelMarker = L.marker([marker.lat, marker.lng], { 
-                            icon: label,
-                            interactive: false
-                        }).addTo(mapInstanceRef.current);
-
-                        // Bind popup to circle
-                        m.bindPopup(popupContent, {
-                            closeButton: true,
-                            autoClose: true,
-                            closeOnClick: true,
-                            maxWidth: 280
-                        });
-
-                        markersRef.current.push(m);
-                        markersRef.current.push(labelMarker);
-                        bounds.push([marker.lat, marker.lng]);
-                    });
-
-                    // Fit bounds
-                    if (bounds.length > 0) {
-                        if (bounds.length === 1) {
-                            mapInstanceRef.current.setView(bounds[0], 12);
-                        } else {
-                            mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
-                        }
-                    }
                 }, [markers]);
 
                 return (
-                    <>
+                    <div style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        height: '100vh',
+                        paddingBottom: 'calc(70px + env(safe-area-inset-bottom))'
+                    }}>
+                        {/* Header */}
                         <div style={styles.header}>
                             <h1 style={styles.headerTitle}>{t('mapTitle')}</h1>
                             <p style={{ ...styles.headerSubtitle, marginTop: '4px' }}>
-                                {markers.length} {language === 'it' ? 'località' : 'locations'}
+                                {isLoading ? t('loading') : `${markers.length} ${language === 'it' ? 'località' : 'locations'}`}
                             </p>
                         </div>
 
-                        <div style={{ ...styles.content, padding: '0', paddingBottom: '100px' }}>
-                            {/* Day filter */}
-                            <div style={{ padding: '12px 20px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--separator)' }}>
-                                <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                        {/* Day filter */}
+                        <div style={{ 
+                            padding: '12px 20px', 
+                            background: 'var(--bg-secondary)', 
+                            borderBottom: '1px solid var(--separator)',
+                            flexShrink: 0
+                        }}>
+                            <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                                <button
+                                    style={{
+                                        ...styles.filterChip,
+                                        ...(selectedDay === 'all' ? styles.filterChipActive : {})
+                                    }}
+                                    onClick={() => setSelectedDay('all')}
+                                >
+                                    {t('allDays')}
+                                </button>
+                                {dates.map(date => (
                                     <button
+                                        key={date}
                                         style={{
                                             ...styles.filterChip,
-                                            ...(selectedDay === 'all' ? styles.filterChipActive : {})
+                                            ...(selectedDay === date ? styles.filterChipActive : {})
                                         }}
-                                        onClick={() => setSelectedDay('all')}
+                                        onClick={() => setSelectedDay(date)}
                                     >
-                                        {t('allDays')}
+                                        {date}
                                     </button>
-                                    {dates.map(date => (
-                                        <button
-                                            key={date}
-                                            style={{
-                                                ...styles.filterChip,
-                                                ...(selectedDay === date ? styles.filterChipActive : {})
-                                            }}
-                                            onClick={() => setSelectedDay(date)}
-                                        >
-                                            {date}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Map container */}
-                            {trips.length === 0 ? (
-                                <div style={styles.noResults}>
-                                    <Icon name="mapPin" size={48} />
-                                    <h3 style={{ margin: '16px 0 8px' }}>{t('noMapData')}</h3>
-                                    <p>{t('addStagesForMap')}</p>
-                                </div>
-                            ) : (
-                                <div 
-                                    ref={mapRef} 
-                                    style={{ 
-                                        width: '100%', 
-                                        height: 'calc(100vh - 280px)',
-                                        minHeight: '300px',
-                                        position: 'relative',
-                                        zIndex: 1
-                                    }} 
-                                />
-                            )}
-
-                            {/* Legend */}
-                            <div style={{ 
-                                padding: '12px 20px', 
-                                background: 'var(--bg-secondary)',
-                                borderTop: '1px solid var(--separator)',
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '12px',
-                                fontSize: '11px'
-                            }}>
-                                {[
-                                    { cat: 'trasporti', color: '#007AFF', label: '🚌 ' + t('transports') },
-                                    { cat: 'alloggio', color: '#5856D6', label: '🏨 ' + t('hotels') },
-                                    { cat: 'cibo', color: '#FF9500', label: '🍽️ ' + t('meals') },
-                                    { cat: 'shopping', color: '#FF2D55', label: '🛍️ Shopping' },
-                                    { cat: 'attivita', color: '#34C759', label: '🎯 ' + t('activities') },
-                                ].map(item => (
-                                    <div key={item.cat} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: item.color }} />
-                                        <span>{item.label}</span>
-                                    </div>
                                 ))}
                             </div>
                         </div>
-                    </>
+
+                        {/* Map */}
+                        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                            {trips.length === 0 ? (
+                                <div style={{ ...styles.emptyState, height: '100%' }}>
+                                    <Icon name="mapPin" size={48} />
+                                    <p style={styles.emptyStateText}>{t('noMapData')}</p>
+                                    <p style={styles.emptyStateSubtext}>{t('addStagesForMap')}</p>
+                                </div>
+                            ) : (
+                                <div 
+                                    ref={mapContainerRef} 
+                                    style={{ 
+                                        width: '100%', 
+                                        height: '100%',
+                                        background: '#e0e0e0'
+                                    }} 
+                                />
+                            )}
+                        </div>
+
+                        {/* Selected marker popup */}
+                        {selectedMarker && (
+                            <div 
+                                style={{
+                                    position: 'absolute',
+                                    bottom: 'calc(80px + env(safe-area-inset-bottom))',
+                                    left: '10px',
+                                    right: '10px',
+                                    background: 'var(--bg-secondary)',
+                                    borderRadius: '16px',
+                                    padding: '16px',
+                                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                                    zIndex: 1000,
+                                    maxHeight: '40vh',
+                                    overflow: 'auto'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                    <div>
+                                        <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+                                            {selectedMarker.name}
+                                        </h3>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                                            📍 {selectedMarker.trips.length} {selectedMarker.trips.length === 1 ? t('stage') : t('stages')}
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => setSelectedMarker(null)}
+                                        style={{
+                                            background: 'var(--separator)',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        <Icon name="close" size={18} />
+                                    </button>
+                                </div>
+                                <div style={{ borderTop: '1px solid var(--separator)', paddingTop: '12px' }}>
+                                    {selectedMarker.trips.slice(0, 8).map((trip, idx) => (
+                                        <div 
+                                            key={idx} 
+                                            style={{ 
+                                                padding: '8px 0', 
+                                                borderBottom: idx < Math.min(selectedMarker.trips.length, 8) - 1 ? '1px solid var(--separator)' : 'none',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '16px' }}>{getTransportIcon(trip.Mezzo)}</span>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>
+                                                    {trip.Luogo || trip.Descrizione}
+                                                </div>
+                                                {trip.Descrizione && trip.Luogo && (
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                                                        {trip.Descrizione.substring(0, 50)}{trip.Descrizione.length > 50 ? '...' : ''}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {trip['Orario Partenza'] && (
+                                                <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                                                    {trip['Orario Partenza']}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {selectedMarker.trips.length > 8 && (
+                                        <div style={{ padding: '8px 0', fontSize: '13px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
+                                            ... e altre {selectedMarker.trips.length - 8} tappe
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Legend */}
+                        <div style={{ 
+                            padding: '10px 20px', 
+                            background: 'var(--bg-secondary)',
+                            borderTop: '1px solid var(--separator)',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: '12px',
+                            fontSize: '11px',
+                            flexShrink: 0
+                        }}>
+                            {[
+                                { color: '#007AFF', label: '🚌 ' + t('transports') },
+                                { color: '#5856D6', label: '🏨 ' + t('hotels') },
+                                { color: '#FF9500', label: '🍽️ ' + t('meals') },
+                                { color: '#FF2D55', label: '🛍️ Shopping' },
+                                { color: '#34C759', label: '🎯 ' + t('activities') },
+                            ].map(item => (
+                                <div key={item.color} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: item.color }} />
+                                    <span>{item.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 );
             };
 

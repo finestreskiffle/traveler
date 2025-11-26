@@ -157,6 +157,54 @@
         .animate-scale {
             animation: scaleIn 0.2s ease-out;
         }
+
+        /* Leaflet popup styles */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .leaflet-popup-content {
+            margin: 12px 14px !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
+        }
+
+        .leaflet-popup-tip {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .leaflet-container {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
+        }
+
+        [data-theme="dark"] .leaflet-popup-content-wrapper {
+            background: #1C1C1E !important;
+            color: #FFFFFF !important;
+        }
+
+        [data-theme="dark"] .leaflet-popup-tip {
+            background: #1C1C1E !important;
+        }
+
+        [data-theme="dark"] .leaflet-popup-content strong {
+            color: #FFFFFF !important;
+        }
+
+        [data-theme="dark"] .leaflet-popup-content div {
+            color: #EBEBF5 !important;
+        }
+
+        .leaflet-popup-close-button {
+            color: #8E8E93 !important;
+            font-size: 20px !important;
+            padding: 8px !important;
+        }
+
+        /* Custom marker styles */
+        .custom-marker {
+            background: transparent !important;
+            border: none !important;
+        }
     </style>
 </head>
 <body>
@@ -198,7 +246,7 @@
         ];
 
         // App Version
-        const APP_VERSION = "3.0.0";
+        const APP_VERSION = "3.0.1";
 
         // Translations
         const TRANSLATIONS = {
@@ -2659,7 +2707,17 @@
 
                         const m = L.marker([marker.lat, marker.lng], { icon })
                             .addTo(mapInstanceRef.current)
-                            .bindPopup(popupContent);
+                            .bindPopup(popupContent, {
+                                closeButton: true,
+                                autoClose: false,
+                                closeOnClick: false,
+                                className: 'travel-popup'
+                            });
+
+                        // Open popup on click (better mobile support)
+                        m.on('click', function() {
+                            this.openPopup();
+                        });
 
                         markersRef.current.push(m);
                         bounds.push([marker.lat, marker.lng]);

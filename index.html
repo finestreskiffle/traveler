@@ -161,6 +161,15 @@
         /* Leaflet map fixes */
         .leaflet-container {
             font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif !important;
+            z-index: 1 !important;
+        }
+
+        .leaflet-pane {
+            z-index: 1 !important;
+        }
+
+        .leaflet-top, .leaflet-bottom {
+            z-index: 2 !important;
         }
 
         .leaflet-control-zoom {
@@ -243,7 +252,7 @@
         ];
 
         // App Version
-        const APP_VERSION = "3.0.4";
+        const APP_VERSION = "3.0.5";
 
         // Translations
         const TRANSLATIONS = {
@@ -1069,7 +1078,7 @@
                 header: {
                     position: 'sticky',
                     top: 0,
-                    zIndex: 100,
+                    zIndex: 500,
                     background: 'var(--glass-bg)',
                     backdropFilter: 'blur(20px)',
                     WebkitBackdropFilter: 'blur(20px)',
@@ -1239,6 +1248,7 @@
                     justifyContent: 'space-around',
                     padding: '8px 0',
                     paddingBottom: 'calc(8px + env(safe-area-inset-bottom))',
+                    zIndex: 1000,
                 },
                 tabButton: {
                     display: 'flex',
@@ -2758,7 +2768,7 @@
                         </div>
 
                         {/* Map */}
-                        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+                        <div style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
                             {trips.length === 0 ? (
                                 <div style={{ ...styles.emptyState, height: '100%' }}>
                                     <Icon name="mapPin" size={48} />
@@ -2771,7 +2781,12 @@
                                     style={{ 
                                         width: '100%', 
                                         height: '100%',
-                                        background: '#e0e0e0'
+                                        background: '#e0e0e0',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        bottom: 0
                                     }} 
                                 />
                             )}

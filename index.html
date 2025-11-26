@@ -252,7 +252,7 @@
         ];
 
         // App Version
-        const APP_VERSION = "3.0.5";
+        const APP_VERSION = "3.1.0";
 
         // Translations
         const TRANSLATIONS = {
@@ -320,6 +320,11 @@
                 mostExpensiveDay: 'Giorno più costoso',
                 cheapestDay: 'Giorno più economico',
                 kmPerTransport: 'Km per mezzo',
+                mealAverages: 'Media Pasti',
+                avgBreakfast: 'Media Colazione',
+                avgLunch: 'Media Pranzo',
+                avgDinner: 'Media Cena',
+                avgSnack: 'Media Merenda/Altro',
                 // Settings
                 settings: 'Impostazioni',
                 customizeApp: 'Personalizza l\'app',
@@ -425,6 +430,11 @@
                 mostExpensiveDay: 'Most Expensive Day',
                 cheapestDay: 'Cheapest Day',
                 kmPerTransport: 'Km by transport',
+                mealAverages: 'Meal Averages',
+                avgBreakfast: 'Avg Breakfast',
+                avgLunch: 'Avg Lunch',
+                avgDinner: 'Avg Dinner',
+                avgSnack: 'Avg Snack/Other',
                 // Settings
                 settings: 'Settings',
                 customizeApp: 'Customize app',
@@ -1850,11 +1860,11 @@
                                         </div>
                                     ) : viewMode === 'timeline' ? (
                                         /* Timeline View */
-                                        <div style={{ position: 'relative', paddingLeft: '24px' }}>
+                                        <div style={{ position: 'relative', paddingLeft: '65px', marginRight: '10px' }}>
                                             {/* Timeline line */}
                                             <div style={{
                                                 position: 'absolute',
-                                                left: '8px',
+                                                left: '50px',
                                                 top: '8px',
                                                 bottom: '8px',
                                                 width: '2px',
@@ -1899,12 +1909,12 @@
                                                         {/* Time label */}
                                                         <div style={{
                                                             position: 'absolute',
-                                                            left: '-60px',
+                                                            left: '-62px',
                                                             top: '2px',
                                                             fontSize: '11px',
                                                             fontWeight: '600',
                                                             color: 'var(--text-tertiary)',
-                                                            width: '35px',
+                                                            width: '38px',
                                                             textAlign: 'right'
                                                         }}>
                                                             {formatTime(trip['Orario Partenza'])}
@@ -2314,6 +2324,115 @@
                                                 <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
                                                     <span style={styles.cardLabel}>📉 {t('cheapestDay')}</span>
                                                     <span style={styles.cardValue}>{cheapestDay.date} ({currency}{cheapestDay.cost.toFixed(2)})</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
+                            {/* Meal Averages */}
+                            {trips.some(t => t.Categoria === 'cibo' && parseFloat(t['Costo Pasto']) > 0) && (
+                                <div style={styles.totalCard}>
+                                    <h3 style={{ ...styles.cardTitle, marginBottom: '16px' }}>
+                                        🍽️ {t('mealAverages')}
+                                    </h3>
+                                    {(() => {
+                                        // Categorize meals by type based on description and time
+                                        const getMealType = (trip) => {
+                                            const desc = (trip.Descrizione || '').toLowerCase();
+                                            const orario = trip['Orario Partenza'] || '';
+                                            const hour = parseInt(orario.split(':')[0]) || 0;
+                                            
+                                            // Check description first
+                                            if (desc.includes('colazione') || desc.includes('breakfast')) return 'breakfast';
+                                            if (desc.includes('pranzo') || desc.includes('lunch')) return 'lunch';
+                                            if (desc.includes('cena') || desc.includes('dinner')) return 'dinner';
+                                            if (desc.includes('merenda') || desc.includes('snack') || desc.includes('dolce') || desc.includes('caffè') || desc.includes('coffee')) return 'snack';
+                                            
+                                            // Fallback to time-based detection
+                                            if (hour >= 5 && hour < 11) return 'breakfast';
+                                            if (hour >= 11 && hour < 15) return 'lunch';
+                                            if (hour >= 18 && hour <= 23) return 'dinner';
+                                            return 'snack';
+                                        };
+                                        
+                                        // Group meals by date and type, then calculate average per type
+                                        const mealsByDateAndType = {};
+                                        
+                                        trips.forEach(trip => {
+                                            if (trip.Categoria === 'cibo' && parseFloat(trip['Costo Pasto']) > 0) {
+                                                const date = trip.Data;
+                                                const type = getMealType(trip);
+                                                const cost = getCostWithMultiplier(trip, 'Costo Pasto');
+                                                
+                                                if (!mealsByDateAndType[date]) {
+                                                    mealsByDateAndType[date] = { breakfast: [], lunch: [], dinner: [], snack: [] };
+                                                }
+                                                mealsByDateAndType[date][type].push(cost);
+                                            }
+                                        });
+                                        
+                                        // Calculate average for each meal type across all days
+                                        // For each day, if multiple options exist for a meal, take the average of those options
+                                        const mealAverages = { breakfast: [], lunch: [], dinner: [], snack: [] };
+                                        
+                                        Object.values(mealsByDateAndType).forEach(dayMeals => {
+                                            ['breakfast', 'lunch', 'dinner', 'snack'].forEach(type => {
+                                                if (dayMeals[type].length > 0) {
+                                                    // Average of options for this meal on this day
+                                                    const dayAvg = dayMeals[type].reduce((a, b) => a + b, 0) / dayMeals[type].length;
+                                                    mealAverages[type].push(dayAvg);
+                                                }
+                                            });
+                                        });
+                                        
+                                        // Calculate overall average for each meal type
+                                        const avgBreakfast = mealAverages.breakfast.length > 0 
+                                            ? mealAverages.breakfast.reduce((a, b) => a + b, 0) / mealAverages.breakfast.length : 0;
+                                        const avgLunch = mealAverages.lunch.length > 0 
+                                            ? mealAverages.lunch.reduce((a, b) => a + b, 0) / mealAverages.lunch.length : 0;
+                                        const avgDinner = mealAverages.dinner.length > 0 
+                                            ? mealAverages.dinner.reduce((a, b) => a + b, 0) / mealAverages.dinner.length : 0;
+                                        const avgSnack = mealAverages.snack.length > 0 
+                                            ? mealAverages.snack.reduce((a, b) => a + b, 0) / mealAverages.snack.length : 0;
+                                        
+                                        return (
+                                            <>
+                                                {avgBreakfast > 0 && (
+                                                    <div style={styles.totalRow}>
+                                                        <span style={styles.cardLabel}>☕ {t('avgBreakfast')}</span>
+                                                        <span style={styles.cardValue}>{currency}{avgBreakfast.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {avgLunch > 0 && (
+                                                    <div style={styles.totalRow}>
+                                                        <span style={styles.cardLabel}>🍱 {t('avgLunch')}</span>
+                                                        <span style={styles.cardValue}>{currency}{avgLunch.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {avgDinner > 0 && (
+                                                    <div style={styles.totalRow}>
+                                                        <span style={styles.cardLabel}>🍝 {t('avgDinner')}</span>
+                                                        <span style={styles.cardValue}>{currency}{avgDinner.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                {avgSnack > 0 && (
+                                                    <div style={{ ...styles.totalRow, borderBottom: 'none' }}>
+                                                        <span style={styles.cardLabel}>🍰 {t('avgSnack')}</span>
+                                                        <span style={styles.cardValue}>{currency}{avgSnack.toFixed(2)}</span>
+                                                    </div>
+                                                )}
+                                                <div style={{ 
+                                                    marginTop: '12px', 
+                                                    paddingTop: '12px', 
+                                                    borderTop: '1px solid var(--separator)',
+                                                    fontSize: '12px',
+                                                    color: 'var(--text-tertiary)'
+                                                }}>
+                                                    {language === 'it' 
+                                                        ? '* Media calcolata considerando le alternative per ogni pasto'
+                                                        : '* Average calculated considering alternatives for each meal'}
                                                 </div>
                                             </>
                                         );

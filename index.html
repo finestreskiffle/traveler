@@ -243,7 +243,7 @@
         ];
 
         // App Version
-        const APP_VERSION = "3.0.3";
+        const APP_VERSION = "3.0.4";
 
         // Translations
         const TRANSLATIONS = {
@@ -2715,7 +2715,7 @@
                         display: 'flex', 
                         flexDirection: 'column', 
                         height: '100vh',
-                        paddingBottom: 'calc(70px + env(safe-area-inset-bottom))'
+                        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))'
                     }}>
                         {/* Header */}
                         <div style={styles.header}>
@@ -2782,7 +2782,7 @@
                             <div 
                                 style={{
                                     position: 'absolute',
-                                    bottom: 'calc(80px + env(safe-area-inset-bottom))',
+                                    bottom: 'calc(100px + env(safe-area-inset-bottom))',
                                     left: '10px',
                                     right: '10px',
                                     background: 'var(--bg-secondary)',
@@ -2806,18 +2806,22 @@
                                     <button 
                                         onClick={() => setSelectedMarker(null)}
                                         style={{
-                                            background: 'var(--separator)',
+                                            background: 'var(--danger)',
                                             border: 'none',
                                             borderRadius: '50%',
-                                            width: '32px',
-                                            height: '32px',
+                                            width: '36px',
+                                            height: '36px',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            cursor: 'pointer'
+                                            cursor: 'pointer',
+                                            color: 'white',
+                                            fontSize: '20px',
+                                            fontWeight: 'bold',
+                                            boxShadow: '0 2px 8px rgba(255,59,48,0.3)'
                                         }}
                                     >
-                                        <Icon name="close" size={18} />
+                                        ✕
                                     </button>
                                 </div>
                                 <div style={{ borderTop: '1px solid var(--separator)', paddingTop: '12px' }}>
